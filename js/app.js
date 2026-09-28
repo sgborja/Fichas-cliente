@@ -9,7 +9,6 @@ const navPrincipal = document.getElementById('nav-principal');
 const estado = {
   vista: 'clientes',
   clienteId: null,
-  tabFicha: 'historial',
   busquedaCliente: '',
   sintomasSeleccionados: new Set(),
   filtroOrigenSintomas: 'todos',
@@ -134,12 +133,10 @@ function vistaFichaCliente(clienteId) {
         </div>
       </div>
 
-      <div class="tabs">
-        <button class="${estado.tabFicha === 'historial' ? 'activo' : ''}" data-tab="historial">📋 Historial de atenciones</button>
-        <button class="${estado.tabFicha === 'datos' ? 'activo' : ''}" data-tab="datos">🌿 Datos personales</button>
-      </div>
+      ${renderTabDatos(cliente)}
 
-      ${estado.tabFicha === 'historial' ? renderTabHistorial(cliente) : renderTabDatos(cliente)}
+      <h3 style="margin:24px 0 4px; font-size:16px;">📋 Historial de atenciones</h3>
+      ${renderTabHistorial(cliente)}
     </div>
   `;
 }
@@ -439,17 +436,12 @@ function bindEventosGlobales() {
     el.addEventListener('click', () => {
       estado.clienteId = el.dataset.abrirCliente;
       estado.vista = 'ficha';
-      estado.tabFicha = 'historial';
       render();
     });
   });
 
   const btnVolver = document.getElementById('btn-volver-clientes');
   if (btnVolver) btnVolver.addEventListener('click', () => irAVista('clientes'));
-
-  document.querySelectorAll('.tabs button[data-tab]').forEach(b => {
-    b.addEventListener('click', () => { estado.tabFicha = b.dataset.tab; render(); });
-  });
 
   const btnEditarCliente = document.getElementById('btn-editar-cliente');
   if (btnEditarCliente) btnEditarCliente.addEventListener('click', () => {

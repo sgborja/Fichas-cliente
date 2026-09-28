@@ -14,6 +14,23 @@ python3 -m http.server 8000
 
 O simplemente abrir `index.html` directamente en el navegador.
 
+## Instalarla como app (PWA)
+
+La app se puede "instalar" en la PC o en el celular, con ícono propio y funcionando sin conexión, porque incluye un manifest (`manifest.json`) y un service worker (`service-worker.js`).
+
+Para que el botón de instalar aparezca, el navegador exige que la página se sirva por **HTTPS** (o `localhost`) — no alcanza con abrir el archivo directamente desde la carpeta. Opciones simples para conseguir esa URL:
+
+- **GitHub Pages** (gratis): en el repo, ir a *Settings → Pages*, elegir la rama y la carpeta raíz, y GitHub genera una URL `https://usuario.github.io/Fichas-cliente/`.
+- Cualquier otro hosting estático (Netlify, Vercel, etc.).
+
+Una vez abierta esa URL:
+
+- **En la PC** (Chrome/Edge): aparece un ícono de instalar en la barra de direcciones, o en el menú ⋮ → "Instalar Lua Azul". Queda como un programa aparte, con su propio ícono.
+- **En el celular** (Android/Chrome): menú ⋮ → "Agregar a pantalla de inicio" / "Instalar app".
+- **En iPhone** (Safari): botón compartir → "Agregar a pantalla de inicio".
+
+Los datos de cada instalación quedan guardados en el `localStorage` de ese navegador/dispositivo — no se sincronizan automáticamente entre PC y celular.
+
 ## Funcionalidad
 
 - **Ficha de cliente**: nombre, email, teléfono, fecha de nacimiento y observaciones generales.
@@ -26,9 +43,11 @@ O simplemente abrir `index.html` directamente en el navegador.
 
 ```
 index.html          Página principal
+manifest.json        Configuración de la app instalable (PWA)
+service-worker.js     Cacheo para funcionamiento offline
 css/styles.css       Estilos (paleta e identidad Lua Azul)
 js/data-flores.js     Base de datos de flores (Bach + California) y motor de recomendación
 js/db.js              Persistencia en localStorage
 js/app.js             Lógica de la interfaz
-assets/               Logo y fuentes de Lua Azul
+assets/               Logo, ícono de la app y fuentes de Lua Azul
 ```
