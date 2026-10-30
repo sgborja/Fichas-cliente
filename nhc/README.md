@@ -28,3 +28,9 @@ supabase/       base de datos (migrations) y funciones del servidor (functions)
 6. Publicar la carpeta `nhc` (Vercel, Netlify o GitHub Pages) y probar un pago con usuarios de prueba de Mercado Pago.
 
 Pendientes: términos y condiciones (`terminos.html`), versión negativa del logo, aviso por WhatsApp/Telegram.
+
+## SEO
+
+- `index.html` ya trae título, descripción, canonical, Open Graph/Twitter, datos estructurados (Organization, WebSite, FAQPage) y preguntas frecuentes visibles.
+- `robots.txt` y `sitemap.xml` excluyen admin, datos y gracias (que además tienen `noindex`).
+- Al publicar: reemplazar `https://TU-DOMINIO` por la URL real en `index.html`, `robots.txt` y `sitemap.xml`, subir `assets/og-image.jpg` (1200×630) y `assets/favicon.png` (isotipo), y dar de alta el sitio en Google Search Console.

@@ -1,5 +1,4 @@
 /* NeoHumanCode · tema naranja (usuarios) según el Manual de Estilo */
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap");
 
 :root {
   --primary: #F97815;
@@ -134,3 +133,9 @@ textarea { min-height: 84px; resize: vertical; }
 .admin-card .row { align-items: end; }
 .toggle { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 0; }
 .toggle input { width: auto; accent-color: var(--primary); }
+
+/* Preguntas frecuentes */
+.faq { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 10px; }
+.faq summary { font-weight: 500; cursor: pointer; }
+.faq p { color: var(--text2); margin-top: 10px; }
+#faq { padding-bottom: 20px; }
