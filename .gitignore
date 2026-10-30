@@ -1,1 +1,4 @@
 .DS_Store
+
+# Documentación con credenciales: no subir
+docs/*.docx
