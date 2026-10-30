@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel · NeoHumanCode</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/nhc.css">
+</head>
+<body>
+  <header class="top"><div class="wrap"><a href="./" data-logo aria-label="NeoHumanCode"></a>
+    <button class="btn ghost hidden" id="salir">Salir</button></div></header>
+  <main class="narrow">
+    <form class="panel" id="login">
+      <h2>Panel de administración</h2>
+      <p class="lead">Ingresá para editar los informes.</p>
+      <label for="u">Mail</label><input id="u" type="email" autocomplete="username" required>
+      <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required>
+      <div class="actions"><button class="btn" type="submit">Entrar</button></div>
+      <p class="msg" id="lmsg" role="alert"></p>
+    </form>
+
+    <div id="app" class="hidden">
+      <div class="admin-card" style="margin-top:24px">
+        <h3>Precio de los 3 informes</h3>
+        <div class="row" style="margin-top:8px">
+          <div><label for="precio">Valor</label><input id="precio" type="number" min="1" step="1"></div>
+          <div><label for="moneda">Moneda</label><input id="moneda" maxlength="3" value="ARS"></div>
+        </div>
+        <div class="actions"><button class="btn" id="gPrecio">Guardar precio</button><span class="msg" id="mPrecio"></span></div>
+      </div>
+      <h2 style="margin:28px 0 14px">Informes</h2>
+      <div id="lista"></div>
+      <button class="btn ghost" id="nuevo" style="margin-bottom:60px">+ Agregar informe</button>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

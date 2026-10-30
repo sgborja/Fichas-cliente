@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tus datos · NeoHumanCode</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/nhc.css">
+</head>
+<body>
+  <header class="top"><div class="wrap"><a href="./" data-logo aria-label="NeoHumanCode"></a></div></header>
+  <main class="narrow">
+    <div class="panel center" id="estado"><h2>Cargando…</h2></div>
+
+    <form class="panel hidden" id="form" novalidate>
+      <h2>Tus datos de nacimiento</h2>
+      <p class="lead">Con estos datos preparamos tu lectura. Cuanto más exactos, mejor.</p>
+      <div class="summary"><b>Tus informes</b><ul id="lista"></ul></div>
+      <div class="row">
+        <div><label for="fecha">Fecha de nacimiento</label><input id="fecha" type="date" required></div>
+        <div>
+          <label for="hora">Hora de nacimiento</label>
+          <input id="hora" type="time">
+          <label class="check-row" style="margin-top:8px"><input type="checkbox" id="nohora"> No sé la hora</label>
+        </div>
+      </div>
+      <label for="lugar">Lugar de nacimiento <span class="opt">(ciudad y país)</span></label>
+      <input id="lugar" autocomplete="off" required>
+      <label for="email">Mail donde recibirás los informes</label>
+      <input id="email" type="email" autocomplete="email" required>
+      <label for="tel">Teléfono <span class="opt">(opcional)</span></label>
+      <input id="tel" type="tel" autocomplete="tel">
+      <div class="actions"><button class="btn" id="enviar" type="submit">Enviar mis datos</button></div>
+      <p class="msg" id="msg" role="alert"></p>
+    </form>
+  </main>
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const t = new URLSearchParams(location.search).get("t") || "";
+    const $ = (id) => document.getElementById(id);
+    const estado = (titulo, texto) => {
+      $("estado").replaceChildren(el("h2", {}, titulo), el("p", { class: "lead" }, texto));
+      $("estado").classList.remove("hidden");
+      $("form").classList.add("hidden");
+    };
+
+    (async () => {
+      try {
+        const p = await fn("pedido", { query: `?t=${encodeURIComponent(t)}` });
+        if (p.estado !== "pagado") return estado("Pago pendiente", "Cuando se confirme el pago podrás cargar tus datos desde este mismo enlace.");
+        if (p.datos_enviados) return estado("Ya recibimos tus datos", "Te enviaremos tus informes por mail.");
+        $("lista").replaceChildren(...p.informes.map((n) => el("li", {}, n)));
+        $("email").value = p.email;
+        $("estado").classList.add("hidden");
+        $("form").classList.remove("hidden");
+      } catch {
+        estado("Enlace inválido", "Revisá el enlace que te enviamos por mail.");
+      }
+    })();
+
+    $("nohora").addEventListener("change", (e) => {
+      $("hora").disabled = e.target.checked;
+      if (e.target.checked) $("hora").value = "";
+    });
+
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = $("msg");
+      msg.textContent = "";
+      const hora = $("nohora").checked ? "desconocida" : $("hora").value;
+      if (!$("fecha").value || !hora || !$("lugar").value.trim() || !$("email").value.trim()) {
+        msg.textContent = "Completá fecha, hora (o marcá que no la sabés), lugar y mail.";
+        return;
+      }
+      $("enviar").disabled = true;
+      try {
+        await fn("submit-datos", {
+          method: "POST",
+          body: { token: t, fecha: $("fecha").value, hora, lugar: $("lugar").value, email: $("email").value, telefono: $("tel").value },
+        });
+        estado("¡Listo!", "Recibimos tus datos. Estamos preparando tus informes y te los enviamos por mail.");
+      } catch (err) {
+        msg.textContent = err.message;
+        $("enviar").disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeoHumanCode · Tu código en tres informes</title>
+  <meta name="description" content="Elegí tres informes de autoconocimiento y recibí la lectura de tu código humano.">
+  <link rel="stylesheet" href="css/nhc.css">
+</head>
+<body>
+  <header class="top"><div class="wrap"><a href="./" data-logo aria-label="NeoHumanCode"></a></div></header>
+
+  <main>
+    <section class="hero wrap">
+      <span class="eyebrow">Autoconocimiento</span>
+      <h1>Descubrí tu código</h1>
+      <p>Elegí tres informes y recibí una lectura clara y personal de quién sos y hacia dónde vas.</p>
+      <ol class="steps">
+        <li><span>1</span> Elegís 3 informes</li>
+        <li><span>2</span> Pagás con Mercado Pago</li>
+        <li><span>3</span> Nos pasás tus datos de nacimiento</li>
+      </ol>
+    </section>
+
+    <section class="wrap" id="catalogo">
+      <div class="section-head">
+        <h2>Elegí tus tres informes</h2>
+        <p>Tocá una tarjeta para sumarla o quitarla.</p>
+      </div>
+      <div class="grid" id="grid" role="group" aria-label="Informes disponibles"></div>
+      <p class="msg center" id="catMsg"></p>
+    </section>
+
+    <section class="narrow hidden" id="checkout">
+      <form class="panel" id="form" novalidate>
+        <h2>Último paso antes de pagar</h2>
+        <p class="lead">Con estos datos te avisamos cuando se confirme el pago.</p>
+        <div class="summary"><b>Tu selección</b><ul id="resumen"></ul></div>
+        <label for="nombre">Nombre</label>
+        <input id="nombre" autocomplete="name" required>
+        <label for="email">Mail</label>
+        <input id="email" type="email" autocomplete="email" required>
+        <label class="check-row">
+          <input type="checkbox" id="ok" required>
+          <span>Acepto los <a href="terminos.html" target="_blank" rel="noopener">términos y la política de privacidad</a>.</span>
+        </label>
+        <div class="actions">
+          <button class="btn" id="pagar" type="submit">Pagar con Mercado Pago</button>
+          <button class="btn ghost" id="volver" type="button">Cambiar selección</button>
+        </div>
+        <p class="msg" id="msg" role="alert"></p>
+      </form>
+    </section>
+  </main>
+
+  <div class="bar" id="bar">
+    <div class="wrap">
+      <div><small id="contador">0 de 3 elegidos</small><span class="price" id="precio">&nbsp;</span></div>
+      <button class="btn" id="seguir" disabled>Continuar</button>
+    </div>
+  </div>
+
+  <footer class="footer">© NeoHumanCode</footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/catalogo.js"></script>
+</body>
+</html>

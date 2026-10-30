@@ -1,0 +1,11 @@
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.mp-webhook]
+verify_jwt = false
+
+[functions.pedido]
+verify_jwt = false
+
+[functions.submit-datos]
+verify_jwt = false

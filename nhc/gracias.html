@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pago · NeoHumanCode</title>
+  <link rel="stylesheet" href="css/nhc.css">
+</head>
+<body>
+  <header class="top"><div class="wrap"><a href="./" data-logo aria-label="NeoHumanCode"></a></div></header>
+  <main class="narrow">
+    <div class="panel center" id="panel">
+      <h2 id="titulo">Confirmando tu pago…</h2>
+      <p class="lead" id="texto">Esto tarda unos segundos.</p>
+      <div class="actions" style="justify-content:center"><a class="btn hidden" id="cta" href="#">Ingresar mis datos</a></div>
+    </div>
+  </main>
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const t = new URLSearchParams(location.search).get("t") || "";
+    const $ = (id) => document.getElementById(id);
+    let intentos = 0;
+
+    async function revisar() {
+      try {
+        const p = await fn("pedido", { query: `?t=${encodeURIComponent(t)}` });
+        if (p.estado === "pagado") {
+          $("titulo").textContent = `¡Gracias, ${p.nombre}!`;
+          if (p.datos_enviados) {
+            $("texto").textContent = "Ya recibimos tus datos. Te enviaremos tus informes por mail.";
+          } else {
+            $("texto").textContent = "Tu pago está confirmado. Te enviamos un mail y falta un último paso: tus datos de nacimiento.";
+            $("cta").href = `datos.html?t=${encodeURIComponent(t)}`;
+            $("cta").classList.remove("hidden");
+          }
+          return;
+        }
+        if (++intentos < 20) return setTimeout(revisar, 3000);
+        $("titulo").textContent = "Todavía no vemos tu pago";
+        $("texto").textContent = "Si ya pagaste, puede demorar unos minutos. Te escribimos por mail apenas se acredite; también podés volver a esta página.";
+      } catch {
+        $("titulo").textContent = "Enlace inválido";
+        $("texto").textContent = "Revisá el enlace que te enviamos por mail.";
+      }
+    }
+    revisar();
+  </script>
+</body>
+</html>
