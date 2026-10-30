@@ -1,0 +1,374 @@
+<title>NeoHumanCode Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap">
+<style>
+/* Tema naranja del Manual de Estilo NHC (usuarios). Una sola paleta: el modo oscuro del tema naranja está pendiente en el manual. */
+:root {
+  --primary: #F97815; --secondary: #D65205; --accent: #FDB877;
+  --bg: #FFF8F0; --text: #442418; --card: #FFFFFF; --soft: #F8EEE2;
+  --text2: #8A6F5C; --border: #EDE0D4; --indigo: #4A41B2; --logo-orange: #FF7C06;
+  --ok: #2F7D4F; --demo: #2A1A12;
+  --radius: 16px; --shadow: 0 8px 28px rgba(68,36,24,.07);
+  --serif: "Playfair Display", Georgia, serif; --sans: "Outfit", system-ui, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 24px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--demo); }
+h1, h2 { font-family: var(--serif); line-height: 1.2; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(32px, 6vw, 48px); font-weight: 700; }
+h2 { font-size: clamp(24px, 4vw, 28px); font-weight: 600; }
+h3 { font: 600 19px/1.3 var(--sans); margin: 0; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+.wrap { width: min(1040px, 100%); margin-inline: auto; }
+.narrow { width: min(560px, 100%); margin-inline: auto; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Barra de demostración */
+.demo { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--demo); color: #FFF8F0;
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))) ; padding: 10px max(16px, env(safe-area-inset-left, 0px)); }
+.demo .wrap { display: flex; gap: 8px 18px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.demo small { color: #FDB877; font-size: 13px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { background: transparent; border: 1px solid #6b4a3b; color: #FFF8F0; border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--primary); border-color: var(--primary); }
+
+/* Cabecera */
+.top { padding: 20px 0 4px; }
+.logo { font: 700 24px var(--serif); color: var(--indigo); }
+.logo b { color: var(--logo-orange); }
+
+.hero { text-align: center; padding: 28px 0 8px; }
+.hero p { color: var(--text2); font-size: 18px; max-width: 520px; margin: 14px auto 0; }
+.eyebrow { display: inline-block; background: var(--accent); color: var(--text); font: 500 13px var(--sans); padding: 4px 14px; border-radius: 999px; margin-bottom: 16px; }
+
+.steps { display: flex; gap: 8px 16px; justify-content: center; flex-wrap: wrap; margin: 24px 0 0; padding: 0; list-style: none; }
+.steps li { font-size: 14px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+.steps span { width: 26px; height: 26px; border-radius: 50%; background: var(--soft); color: var(--secondary); display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+.steps li[aria-current="step"] { color: var(--text); font-weight: 500; }
+.steps li[aria-current="step"] span { background: var(--primary); color: #fff; }
+
+.section-head { text-align: center; margin: 32px 0 22px; }
+.section-head p { color: var(--text2); margin-top: 6px; }
+
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); padding-bottom: 120px; }
+.card { position: relative; background: var(--card); border: 2px solid var(--border); border-radius: var(--radius); padding: 22px; cursor: pointer;
+  box-shadow: var(--shadow); transition: border-color .15s, transform .15s; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.card:hover { transform: translateY(-2px); }
+.card p { color: var(--text2); font-size: 15px; }
+.card[aria-pressed="true"] { border-color: var(--primary); background: #FFFBF6; }
+.card.off { opacity: .45; cursor: not-allowed; transform: none; }
+.check { position: absolute; top: 16px; right: 16px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; color: #fff; font-size: 14px; }
+.card[aria-pressed="true"] .check { background: var(--primary); border-color: var(--primary); }
+.ico { width: 56px; height: 56px; border-radius: 16px; background: var(--soft); display: grid; place-items: center; font-size: 30px; }
+.card[aria-pressed="true"] .ico { background: var(--accent); }
+.path { font: 500 13px var(--sans); color: var(--secondary); text-transform: uppercase; letter-spacing: .06em; }
+
+.bar { position: fixed; inset: auto 0 0 0; background: rgba(255,255,255,.95); backdrop-filter: blur(8px); border-top: 1px solid var(--border); z-index: 10;
+  padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.bar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.bar small { color: var(--text2); display: block; }
+.price { font: 600 24px var(--serif); font-variant-numeric: tabular-nums; }
+
+.btn { background: var(--primary); color: #fff; border: 0; border-radius: 999px; padding: 14px 28px; font: 500 16px var(--sans); cursor: pointer; transition: background .15s; }
+.btn:hover:not(:disabled) { background: var(--secondary); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--secondary); border: 2px solid var(--accent); }
+
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; margin: 24px 0 40px; }
+.panel .lead { color: var(--text2); margin: 6px 0 18px; }
+.center { text-align: center; }
+label { display: block; font-weight: 500; font-size: 14px; margin: 16px 0 6px; }
+.opt { color: var(--text2); font-weight: 400; }
+input[type=text], input[type=email], input[type=tel], input[type=date], input[type=time], input[type=number], textarea {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font: 400 16px var(--sans); color: var(--text); background: #fff; }
+textarea { min-height: 84px; resize: vertical; }
+input:focus, textarea:focus { outline: 3px solid var(--accent); border-color: var(--primary); }
+.row { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+.check-row { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 0; font-size: 14px; color: var(--text2); font-weight: 400; }
+.check-row input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--primary); flex: none; }
+.actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+.msg { margin-top: 12px; font-size: 14px; color: var(--secondary); min-height: 20px; }
+.summary { background: var(--soft); border-radius: 12px; padding: 14px 18px; margin: 14px 0; }
+.summary ul { margin: 6px 0 0; padding-left: 20px; }
+.summary .tot { display: flex; justify-content: space-between; border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px; font-weight: 600; }
+.sim { border: 2px dashed var(--accent); border-radius: var(--radius); padding: 18px; background: #FFFBF6; margin: 16px 0; }
+.sim b { color: var(--secondary); }
+.chip { display: inline-block; background: var(--soft); color: var(--secondary); font: 500 13px var(--sans); padding: 4px 12px; border-radius: 999px; }
+.okmark { width: 64px; height: 64px; border-radius: 50%; background: var(--ok); color: #fff; display: grid; place-items: center; font-size: 32px; margin: 0 auto 14px; }
+
+.faq { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 10px; }
+.faq summary { font-weight: 500; cursor: pointer; }
+.faq p { color: var(--text2); margin-top: 10px; }
+.legal { color: var(--text2); font-size: 13px; text-align: center; max-width: 620px; margin: 18px auto 0; }
+.footer { text-align: center; color: var(--text2); font-size: 13px; padding: 26px 0 110px; }
+.footer a { color: var(--secondary); }
+
+/* Mails */
+.mails { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin: 28px 0 40px; }
+.mail-cap { font: 500 13px var(--sans); color: var(--text2); margin-bottom: 8px; }
+.mail-cap b { color: var(--text); }
+.mail { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 22px 16px; }
+.mail .in { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 22px; margin-top: 14px; }
+.mail h3 { font: 700 22px var(--serif); margin-bottom: 10px; }
+.mail .b { display: block; text-align: center; background: var(--primary); color: #fff; border-radius: 999px; padding: 12px; margin-top: 18px; font-weight: 500; }
+.mail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
+.mail dt { font-weight: 600; } .mail dd { margin: 0; overflow-wrap: anywhere; }
+
+/* Admin */
+.acard { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
+.toggle { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 0; }
+.toggle input { accent-color: var(--primary); width: 18px; height: 18px; }
+.note { background: var(--soft); border-radius: 12px; padding: 12px 16px; font-size: 14px; color: var(--text2); margin: 18px 0; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="demo">
+  <div class="wrap">
+    <small><b>Versión de demostración.</b> No se cobra nada ni se envía ningún mail.</small>
+    <div class="tabs" role="tablist" aria-label="Vistas de la demostración">
+      <button class="tab" role="tab" data-tab="sitio">Sitio del cliente</button>
+      <button class="tab" role="tab" data-tab="mails">Mails</button>
+      <button class="tab" role="tab" data-tab="admin">Panel de administración</button>
+    </div>
+  </div>
+</div>
+
+<div id="app"></div>
+
+<script>
+const S = {
+  tab: 'sitio', step: 'elegir', sel: [], precio: 29900,
+  informes: [
+    { id: 'bereshit', camino: 'Conocerme', icono: '🌱', nombre: 'Bereshit', visible: true,
+      desc: 'Tu identidad, tus vínculos, tu propósito y la etapa vital que atravesás. Un recorrido para entender quién sos, de dónde venís y hacia dónde querés ir.' },
+    { id: 'talento', camino: 'Desarrollarme', icono: '🧭', nombre: 'Talento y Puesto', visible: true,
+      desc: 'Tus fortalezas, capacidades y motivaciones, y cómo decidís y trabajás en equipo. Una guía para orientar tu desarrollo profesional.' },
+    { id: 'jacinta', camino: 'Relacionarme', icono: '🤝', nombre: 'Jacinta', visible: true,
+      desc: 'Cómo te vinculás con los demás y cómo influís en ellos: emociones, motivaciones, armonía y liderazgo, en doce dimensiones.' },
+    { id: 'arbol', camino: 'Trascender', icono: '🌳', nombre: 'Árbol de la Vida', visible: true,
+      desc: 'Una lectura desde la Cábala y las Sefirot: patrones simbólicos de tu identidad y prácticas para profundizar tu dimensión espiritual.' },
+  ],
+  cli: { nombre: 'Laura Gómez', email: 'laura@ejemplo.com' },
+  nac: { fecha: '1978-04-12', hora: '08:30', sinHora: false, lugar: 'Rosario, Argentina', email: '', tel: '' },
+};
+const MAX = 3;
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
+const visibles = () => S.informes.filter((i) => i.visible);
+const elegidos = () => S.sel.map((id) => S.informes.find((i) => i.id === id)).filter(Boolean);
+const logo = '<span class="logo">NeoHuman<b>Code</b></span>';
+const STEPS = [['elegir', 'Elegís 3 informes'], ['pagar', 'Pagás con Mercado Pago'], ['datos', 'Cargás tus datos de nacimiento'], ['listo', 'Listo']];
+
+function stepper() {
+  const idx = { elegir: 0, checkout: 0, pagar: 1, gracias: 1, datos: 2, listo: 3 }[S.step];
+  return `<ol class="steps">${STEPS.map((s, i) => `<li ${i === idx ? 'aria-current="step"' : ''}><span>${i + 1}</span> ${s[1]}</li>`).join('')}</ol>`;
+}
+
+const FAQ = [
+  ['¿Cómo funciona?', 'Elegís tres informes, pagás con Mercado Pago y después nos pasás tu fecha, hora y lugar de nacimiento. Te enviamos los informes por mail.'],
+  ['¿Necesito crear una cuenta?', 'No. No hay registro: solo tu mail y tus datos de nacimiento.'],
+  ['¿Qué datos necesito para mi informe?', 'Fecha, hora y lugar de nacimiento. Si no sabés la hora, podés indicarlo.'],
+  ['¿Cómo se paga?', 'Con Mercado Pago: tarjeta, dinero en cuenta u otros medios disponibles.'],
+];
+const legal = '<p class="legal">Los informes son herramientas de reflexión basadas en sistemas interpretativos y simbólicos. No son mediciones psicológicas validadas ni criterios de selección laboral.</p>';
+const footer = '<footer class="footer">© NeoHumanCode · <a href="#sitio">Términos y privacidad</a> · <a href="#sitio">Política de cookies</a> · <a href="#sitio">Accesibilidad</a></footer>';
+
+function vElegir() {
+  const lleno = S.sel.length >= MAX;
+  return `<header class="top wrap">${logo}</header>
+  <main>
+    <section class="hero wrap"><span class="eyebrow">Autoconocimiento</span><h1>Descubrí tu código</h1>
+      <p>Elegí tres caminos para conocerte mejor y recibí una lectura clara y personal.</p>${stepper()}</section>
+    <section class="wrap">
+      <div class="section-head"><h2>Elegí tus tres informes</h2><p>Tocá una tarjeta para sumarla o quitarla.</p></div>
+      <div class="grid">${visibles().map((i) => {
+        const on = S.sel.includes(i.id);
+        return `<button class="card ${lleno && !on ? 'off' : ''}" data-id="${i.id}" aria-pressed="${on}">
+          <span class="check" aria-hidden="true">✓</span><span class="ico" aria-hidden="true">${esc(i.icono)}</span>
+          <span class="path">${esc(i.camino)}</span><h3>${esc(i.nombre)}</h3><p>${esc(i.desc)}</p></button>`;
+      }).join('')}</div>
+    </section>
+    <section class="narrow"><div class="section-head"><h2>Preguntas frecuentes</h2></div>
+      ${FAQ.map((f) => `<details class="faq"><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join('')}${legal}</section>
+  </main>${footer}
+  <div class="bar"><div class="wrap"><div><small>${S.sel.length} de ${MAX} elegidos</small><span class="price">${money(S.precio)}</span></div>
+    <button class="btn" id="seguir" ${S.sel.length === MAX ? '' : 'disabled'}>Continuar</button></div></div>`;
+}
+
+function resumen(conTotal) {
+  return `<div class="summary"><b>Tu selección</b><ul>${elegidos().map((i) => `<li>${esc(i.icono)} ${esc(i.nombre)}</li>`).join('')}</ul>
+    ${conTotal ? `<div class="tot"><span>Total</span><span>${money(S.precio)}</span></div>` : ''}</div>`;
+}
+
+function vCheckout() {
+  return `<header class="top wrap">${logo}</header><main class="narrow">${stepper()}
+  <form class="panel" id="f-checkout" novalidate>
+    <h2>Último paso antes de pagar</h2><p class="lead">Con estos datos te avisamos cuando se confirme el pago.</p>
+    ${resumen(true)}
+    <label for="c-nombre">Nombre</label><input id="c-nombre" type="text" autocomplete="name" value="${esc(S.cli.nombre)}">
+    <label for="c-email">Mail</label><input id="c-email" type="email" autocomplete="email" value="${esc(S.cli.email)}">
+    <label class="check-row" for="c-edad"><input type="checkbox" id="c-edad"><span>Confirmo que soy mayor de 18 años.</span></label>
+    <label class="check-row" for="c-ok"><input type="checkbox" id="c-ok"><span>Acepto los <a href="#sitio">términos y la política de privacidad</a>.</span></label>
+    <div class="actions"><button class="btn" type="submit">Pagar con Mercado Pago</button><button class="btn ghost" type="button" id="atras">Cambiar selección</button></div>
+    <p class="msg" id="msg" role="alert"></p>
+  </form></main>${footer}`;
+}
+
+function vPagar() {
+  return `<header class="top wrap">${logo}</header><main class="narrow">${stepper()}
+  <div class="panel">
+    <h2>Pago en Mercado Pago</h2>
+    <p class="lead">En el sitio real, acá se abre Mercado Pago para completar el pago de forma segura.</p>
+    ${resumen(true)}
+    <div class="sim"><b>Pantalla simulada.</b> Mercado Pago ofrece tarjeta, dinero en cuenta y otros medios. Al aprobarse el pago, el sitio lo verifica y habilita el siguiente paso.</div>
+    <div class="actions"><button class="btn" id="aprobar">Simular pago aprobado</button><button class="btn ghost" id="atras2">Volver</button></div>
+  </div></main>${footer}`;
+}
+
+function vGracias() {
+  return `<header class="top wrap">${logo}</header><main class="narrow">${stepper()}
+  <div class="panel center"><div class="okmark" aria-hidden="true">✓</div><h2>¡Gracias, ${esc(S.cli.nombre.split(' ')[0] || '')}!</h2>
+    <p class="lead">Tu pago está confirmado. Te enviamos un mail y falta un último paso: tus datos de nacimiento.</p>
+    <div class="actions" style="justify-content:center"><button class="btn" id="ir-datos">Ingresar mis datos</button></div>
+    <p class="msg"><button class="tab" style="color:var(--secondary);border-color:var(--accent)" data-tab="mails">Ver el mail que recibe</button></p>
+  </div></main>${footer}`;
+}
+
+function vDatos() {
+  const n = S.nac;
+  return `<header class="top wrap">${logo}</header><main class="narrow">${stepper()}
+  <form class="panel" id="f-datos" novalidate>
+    <h2>Tus datos de nacimiento</h2><p class="lead">Con estos datos preparamos tu lectura. Cuanto más exactos, mejor.</p>
+    ${resumen(false)}
+    <div class="row">
+      <div><label for="d-fecha">Fecha de nacimiento</label><input id="d-fecha" type="date" value="${esc(n.fecha)}"></div>
+      <div><label for="d-hora">Hora de nacimiento</label><input id="d-hora" type="time" value="${esc(n.hora)}" ${n.sinHora ? 'disabled' : ''}>
+        <label class="check-row" for="d-sin"><input type="checkbox" id="d-sin" ${n.sinHora ? 'checked' : ''}> No sé la hora</label></div>
+    </div>
+    <label for="d-lugar">Lugar de nacimiento <span class="opt">(ciudad y país)</span></label><input id="d-lugar" type="text" value="${esc(n.lugar)}">
+    <label for="d-email">Mail donde recibirás los informes</label><input id="d-email" type="email" value="${esc(n.email || S.cli.email)}">
+    <label for="d-tel">Teléfono <span class="opt">(opcional)</span></label><input id="d-tel" type="tel" value="${esc(n.tel)}">
+    <div class="actions"><button class="btn" type="submit">Enviar mis datos</button></div>
+    <p class="msg" id="msg" role="alert"></p>
+  </form></main>${footer}`;
+}
+
+function vListo() {
+  return `<header class="top wrap">${logo}</header><main class="narrow">${stepper()}
+  <div class="panel center"><div class="okmark" aria-hidden="true">✓</div><h2>¡Listo!</h2>
+    <p class="lead">Recibimos tus datos. Estamos preparando tus informes y te los enviamos por mail.</p>
+    <div class="actions" style="justify-content:center"><button class="tab" style="color:var(--secondary);border-color:var(--accent)" data-tab="mails">Ver los mails</button>
+      <button class="btn ghost" id="reiniciar">Probar de nuevo</button></div></div></main>${footer}`;
+}
+
+function mail(titulo, para, asunto, cuerpo, boton) {
+  return `<div><div class="mail-cap"><b>${titulo}</b><br>Para: ${esc(para)} · Asunto: ${esc(asunto)}</div>
+    <div class="mail"><div style="text-align:center">${logo}</div><div class="in">${cuerpo}${boton ? `<span class="b">${boton}</span>` : ''}</div></div></div>`;
+}
+function vMails() {
+  const el = elegidos().length ? elegidos() : S.informes.slice(0, 3);
+  const lista = `<ul style="padding-left:20px;margin:8px 0">${el.map((i) => `<li>${esc(i.nombre)}</li>`).join('')}</ul>`;
+  const n = S.nac;
+  return `<header class="top wrap">${logo}</header><main class="wrap">
+  <div class="section-head"><h2>Mails automáticos</h2><p>Estos son los tres mails que envía el sistema, con los datos de la prueba.</p></div>
+  <div class="mails">
+    ${mail('1. Pago confirmado', S.cli.email, 'Recibimos tu pago · NeoHumanCode',
+      `<h3>¡Pago confirmado!</h3><p>Hola ${esc(S.cli.nombre)}, recibimos tu pago. Tus informes:</p>${lista}<p>Falta un último paso: ingresá tus datos de nacimiento para que podamos preparar tu lectura.</p>`, 'Ingresar mis datos')}
+    ${mail('2. Aviso a la administradora', 'administración (mail del negocio)', `Nuevo informe en espera · ${S.cli.nombre}`,
+      `<h3>Nuevo informe en espera</h3><dl><dt>Nombre</dt><dd>${esc(S.cli.nombre)}</dd><dt>Nacimiento</dt><dd>${esc(n.fecha)}</dd><dt>Hora</dt><dd>${n.sinHora ? 'desconocida' : esc(n.hora)}</dd><dt>Lugar</dt><dd>${esc(n.lugar)}</dd><dt>Mail</dt><dd>${esc(n.email || S.cli.email)}</dd><dt>Teléfono</dt><dd>${esc(n.tel || '—')}</dd></dl><p style="margin-top:12px"><b>Informes pagados:</b></p>${lista}`)}
+    ${mail('3. Datos recibidos', n.email || S.cli.email, 'Recibimos tus datos · NeoHumanCode',
+      `<h3>¡Listo, ya tenemos tus datos!</h3><p>Hola ${esc(S.cli.nombre)}, estamos preparando tus informes. Te los enviamos a este mail.</p>`)}
+  </div></main>${footer}`;
+}
+
+function vAdmin() {
+  return `<header class="top wrap">${logo}</header><main class="narrow">
+  <div class="section-head" style="text-align:left"><h2>Panel de administración</h2></div>
+  <div class="note">Probalo: lo que cambies acá se ve enseguida en el sitio. En la versión real el panel pide mail y contraseña.</div>
+  <div class="acard"><h3>Precio de los 3 informes</h3>
+    <label for="a-precio">Valor (ARS)</label><input id="a-precio" type="number" min="1" step="100" value="${S.precio}"></div>
+  <h2 style="margin:26px 0 14px">Informes</h2>
+  ${S.informes.map((i, k) => `<div class="acard">
+    <label for="a-n${k}">Nombre</label><input id="a-n${k}" type="text" data-k="${k}" data-f="nombre" value="${esc(i.nombre)}">
+    <label for="a-d${k}">Descripción</label><textarea id="a-d${k}" data-k="${k}" data-f="desc">${esc(i.desc)}</textarea>
+    <div class="row"><div><label for="a-i${k}">Ícono (un emoji)</label><input id="a-i${k}" type="text" maxlength="4" data-k="${k}" data-f="icono" value="${esc(i.icono)}"></div>
+      <div><label for="a-c${k}">Camino</label><input id="a-c${k}" type="text" data-k="${k}" data-f="camino" value="${esc(i.camino)}"></div></div>
+    <label class="toggle" style="margin-top:14px" for="a-v${k}"><input type="checkbox" id="a-v${k}" data-k="${k}" data-f="visible" ${i.visible ? 'checked' : ''}> Visible en la web</label>
+  </div>`).join('')}</main>${footer}`;
+}
+
+function render() {
+  document.querySelectorAll('.tab[data-tab]').forEach((b) => { if (b.closest('.demo')) b.setAttribute('aria-selected', b.dataset.tab === S.tab); });
+  const v = S.tab === 'mails' ? vMails() : S.tab === 'admin' ? vAdmin()
+    : { elegir: vElegir, checkout: vCheckout, pagar: vPagar, gracias: vGracias, datos: vDatos, listo: vListo }[S.step]();
+  $('#app').innerHTML = v;
+  bind();
+  if (!document.activeElement || document.activeElement === document.body) window.scrollTo(0, 0);
+}
+const go = (step) => { S.step = step; S.tab = 'sitio'; render(); window.scrollTo(0, 0); };
+
+function bind() {
+  document.querySelectorAll('#app [data-tab]').forEach((b) => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); window.scrollTo(0, 0); }));
+  document.querySelectorAll('.card[data-id]').forEach((c) => c.addEventListener('click', () => {
+    const id = c.dataset.id;
+    if (S.sel.includes(id)) S.sel = S.sel.filter((x) => x !== id); else if (S.sel.length < MAX) S.sel.push(id);
+    const y = scrollY; render(); scrollTo(0, y);
+  }));
+  const on = (id, fn) => { const e = $(id); if (e) e.addEventListener('click', fn); };
+  on('#seguir', () => go('checkout'));
+  on('#atras', () => go('elegir'));
+  on('#atras2', () => go('checkout'));
+  on('#aprobar', () => go('gracias'));
+  on('#ir-datos', () => go('datos'));
+  on('#reiniciar', () => { S.sel = []; S.nac.email = ''; go('elegir'); });
+
+  const fc = $('#f-checkout');
+  if (fc) fc.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nombre = $('#c-nombre').value.trim(), email = $('#c-email').value.trim();
+    const msg = $('#msg');
+    if (!nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = 'Revisá tu nombre y tu mail.'; return; }
+    if (!$('#c-edad').checked) { msg.textContent = 'El servicio es solo para mayores de 18 años.'; return; }
+    if (!$('#c-ok').checked) { msg.textContent = 'Tenés que aceptar los términos para continuar.'; return; }
+    S.cli = { nombre, email }; go('pagar');
+  });
+
+  const fd = $('#f-datos');
+  if (fd) {
+    $('#d-sin').addEventListener('change', (e) => { $('#d-hora').disabled = e.target.checked; });
+    fd.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const sin = $('#d-sin').checked;
+      if (!$('#d-fecha').value || (!sin && !$('#d-hora').value) || !$('#d-lugar').value.trim() || !$('#d-email').value.trim()) {
+        $('#msg').textContent = 'Completá fecha, hora (o marcá que no la sabés), lugar y mail.'; return;
+      }
+      S.nac = { fecha: $('#d-fecha').value, hora: $('#d-hora').value, sinHora: sin, lugar: $('#d-lugar').value.trim(), email: $('#d-email').value.trim(), tel: $('#d-tel').value.trim() };
+      go('listo');
+    });
+  }
+
+  const ap = $('#a-precio');
+  if (ap) ap.addEventListener('input', () => { S.precio = Math.max(1, Number(ap.value) || 1); });
+  document.querySelectorAll('#app [data-k]').forEach((f) => f.addEventListener('input', () => {
+    const i = S.informes[f.dataset.k];
+    i[f.dataset.f] = f.type === 'checkbox' ? f.checked : f.value;
+    if (f.dataset.f === 'visible') S.sel = S.sel.filter((id) => S.informes.find((x) => x.id === id)?.visible);
+  }));
+}
+
+document.querySelectorAll('.demo .tab').forEach((b) => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); window.scrollTo(0, 0); }));
+render();
+</script>

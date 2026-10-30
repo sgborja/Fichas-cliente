@@ -64,10 +64,10 @@ insert into public.config (id, precio, moneda) values (1, 0, 'ARS');
 
 -- Informes de ejemplo: se editan desde /admin.html
 insert into public.informes (nombre, descripcion, icono, orden) values
-  ('Informe 1', 'Descripción del informe 1.', '🔢', 1),
-  ('Informe 2', 'Descripción del informe 2.', '🌞', 2),
-  ('Informe 3', 'Descripción del informe 3.', '🌙', 3),
-  ('Informe 4', 'Descripción del informe 4.', '🌳', 4);
+  ('Bereshit', 'Tu identidad, tus vínculos, tu propósito y la etapa vital que atravesás. Un recorrido para entender quién sos, de dónde venís y hacia dónde querés ir.', '🌱', 1),
+  ('Talento y Puesto', 'Tus fortalezas, capacidades y motivaciones, y cómo decidís y trabajás en equipo. Una guía para orientar tu desarrollo profesional.', '🧭', 2),
+  ('Jacinta', 'Cómo te vinculás con los demás y cómo influís en ellos: emociones, motivaciones, armonía y liderazgo, en doce dimensiones.', '🤝', 3),
+  ('Árbol de la Vida', 'Una lectura desde la Cábala y las Sefirot: patrones simbólicos de tu identidad y prácticas para profundizar tu dimensión espiritual.', '🌳', 4);
 
 -- Después de crear tu usuario admin en Supabase Auth, ejecutá:
 -- insert into public.admins (email) values ('tu@mail.com');

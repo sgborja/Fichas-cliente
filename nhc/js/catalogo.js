@@ -2,10 +2,10 @@ const MAX = 3;
 const DEMO = {
   config: { precio: 24900, moneda: "ARS" },
   informes: [
-    { id: "1", icono: "🔢", nombre: "Numerología", descripcion: "Tu camino de vida y los números que marcan tu ritmo personal." },
-    { id: "2", icono: "🌞", nombre: "Kin Maya", descripcion: "Tu signo en el calendario maya: tu tono, tu sello y tu misión." },
-    { id: "3", icono: "🌙", nombre: "Carta astral", descripcion: "El mapa del cielo en tu momento de nacimiento, explicado simple." },
-    { id: "4", icono: "🌳", nombre: "Árbol de la Vida", descripcion: "Tu lectura cabalística: fortalezas, desafíos y próximos pasos." },
+    { id: "1", icono: "🌱", nombre: "Bereshit", descripcion: "Tu identidad, tus vínculos, tu propósito y la etapa vital que atravesás. Un recorrido para entender quién sos, de dónde venís y hacia dónde querés ir." },
+    { id: "2", icono: "🧭", nombre: "Talento y Puesto", descripcion: "Tus fortalezas, capacidades y motivaciones, y cómo decidís y trabajás en equipo. Una guía para orientar tu desarrollo profesional." },
+    { id: "3", icono: "🤝", nombre: "Jacinta", descripcion: "Cómo te vinculás con los demás y cómo influís en ellos: emociones, motivaciones, armonía y liderazgo, en doce dimensiones." },
+    { id: "4", icono: "🌳", nombre: "Árbol de la Vida", descripcion: "Una lectura desde la Cábala y las Sefirot: patrones simbólicos de tu identidad y prácticas para profundizar tu dimensión espiritual." },
   ],
 };
 const elegidos = new Map(); // id -> nombre
