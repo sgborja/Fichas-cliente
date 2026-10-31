@@ -86,7 +86,8 @@ async function pagarGift(id: string, pago: any, paymentId: string) {
       `${gift.comprador_nombre} te regaló NeoHumanCode`,
       emailLayout(
         "¡Tenés un regalo!",
-        `<p>${para ? `Hola ${para}, ` : "Hola, "}${de} te regaló tus informes de autoconocimiento NeoHumanCode.</p>${msg}
+        `<p style="text-align:center;margin:0 0 16px"><img src="${SITE_URL}/assets/giftcard.jpg" alt="Gift card NeoHumanCode: 4 informes personalizados" width="480" style="max-width:100%;height:auto;border-radius:12px"></p>
+         <p>${para ? `Hola ${para}, ` : "Hola, "}${de} te regaló tus informes de autoconocimiento NeoHumanCode.</p>${msg}
          <p>Tu código de regalo:</p>${codigoHtml}
          <p>Ingresalo en el sitio, cargá tus datos de nacimiento y listo. <b>Podés canjearlo hasta el ${vence}.</b></p>`,
         { texto: "Canjear mi regalo", url: `${SITE_URL}/canjear.html?c=${encodeURIComponent(gift.codigo)}` },

@@ -39,6 +39,7 @@ function abrir(m) {
   modo = m;
   const gift = m === "gift";
   $("giftCampos").classList.toggle("hidden", !gift);
+  if ($("giftImg")) $("giftImg").classList.toggle("hidden", !gift);
   $("formTitulo").textContent = gift ? "Tu gift card" : "Último paso antes de pagar";
   $("formLead").textContent = gift
     ? "Después del pago, enviamos el código por mail a quien recibe el regalo y también a vos."
