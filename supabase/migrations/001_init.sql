@@ -60,6 +60,16 @@ create policy config_lectura on public.config for select using (true);
 create policy config_admin on public.config for update using (public.is_admin()) with check (public.is_admin());
 -- pedidos, datos_nacimiento y admins: sin políticas = solo accesibles con la service role (funciones)
 
+-- Permisos explícitos (la opción "Automatically expose new tables" de Supabase debe estar desactivada).
+-- Solo informes y config se exponen por la Data API; pedidos, datos_nacimiento y admins quedan sin acceso desde el navegador.
+grant usage on schema public to anon, authenticated;
+grant select on public.informes, public.config to anon, authenticated;
+grant insert, update, delete on public.informes to authenticated;
+grant update on public.config to authenticated;
+grant execute on function public.is_admin() to anon, authenticated;
+-- Las funciones del servidor usan la service role
+grant all on all tables in schema public to service_role;
+
 insert into public.config (id, precio, moneda) values (1, 0, 'ARS');
 
 -- Informes de ejemplo: se editan desde /admin.html
