@@ -139,3 +139,13 @@ textarea { min-height: 84px; resize: vertical; }
 .faq summary { font-weight: 500; cursor: pointer; }
 .faq p { color: var(--text2); margin-top: 10px; }
 #faq { padding-bottom: 20px; }
+
+/* Páginas legales */
+.legal h2 { margin: 34px 0 8px; scroll-margin-top: 16px; }
+.legal h2:first-of-type { margin-top: 0; }
+.legal h3 { margin: 18px 0 6px; font-size: 17px; }
+.legal p, .legal li { line-height: 1.55; }
+.legal ul, .legal ol { padding-left: 22px; }
+.legal .toc { margin-bottom: 8px; font-size: 14px; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; }
+.legal-table th, .legal-table td { border: 1px solid var(--line, #EDE0D4); padding: 8px 10px; text-align: left; vertical-align: top; }
