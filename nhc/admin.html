@@ -26,7 +26,24 @@
     </form>
 
     <div id="app" class="hidden">
-      <div class="admin-card" style="margin-top:24px">
+      <nav class="tabs" role="tablist" style="margin-top:24px">
+        <button class="tab on" data-tab="pedidos" role="tab">Pedidos</button>
+        <button class="tab" data-tab="gifts" role="tab">Gift cards</button>
+        <button class="tab" data-tab="config" role="tab">Informes y precio</button>
+      </nav>
+
+      <section id="t-pedidos">
+        <div class="resumen" id="resPedidos"></div>
+        <div id="listaPedidos"></div>
+      </section>
+
+      <section id="t-gifts" class="hidden">
+        <div class="resumen" id="resGifts"></div>
+        <div id="listaGifts"></div>
+      </section>
+
+      <section id="t-config" class="hidden">
+      <div class="admin-card">
         <h3>Precio (pagás 3, recibís los 4 informes)</h3>
         <div class="row" style="margin-top:8px">
           <div><label for="precio">Valor</label><input id="precio" type="number" min="1" step="1"></div>
@@ -37,6 +54,7 @@
       <h2 style="margin:28px 0 14px">Informes</h2>
       <div id="lista"></div>
       <button class="btn ghost" id="nuevo" style="margin-bottom:60px">+ Agregar informe</button>
+      </section>
     </div>
   </main>
 
