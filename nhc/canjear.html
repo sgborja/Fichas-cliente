@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Canjear gift card · NeoHumanCode</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap">
+  <link rel="stylesheet" href="css/nhc.css">
+  <link rel="icon" href="assets/favicon.png">
+  <meta name="theme-color" content="#FFF8F0">
+</head>
+<body>
+  <header class="top"><div class="wrap"><a href="./" data-logo aria-label="NeoHumanCode"></a></div></header>
+  <main class="narrow">
+    <form class="panel" id="form" novalidate>
+      <h2>Canjeá tu gift card 🎁</h2>
+      <p class="lead">Ingresá el código que te llegó por mail y recibí tus cuatro informes sin pagar.</p>
+      <label for="codigo">Código</label>
+      <input id="codigo" autocomplete="off" autocapitalize="characters" placeholder="NHC-XXXX-XXXX" required>
+      <label for="nombre">Tu nombre</label>
+      <input id="nombre" autocomplete="name" required>
+      <label for="email">Tu mail</label>
+      <input id="email" type="email" autocomplete="email" required>
+      <label class="check-row">
+        <input type="checkbox" id="ok" required>
+        <span>Acepto los <a href="terminos.html" target="_blank" rel="noopener">términos y la política de privacidad</a>.</span>
+      </label>
+      <div class="actions"><button class="btn" id="canjear" type="submit">Canjear</button></div>
+      <p class="msg" id="msg" role="alert"></p>
+    </form>
+  </main>
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const c = new URLSearchParams(location.search).get("c");
+    if (c) $("codigo").value = c;
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = $("msg");
+      msg.textContent = "";
+      const nombre = $("nombre").value.trim(), email = $("email").value.trim(), codigo = $("codigo").value.trim();
+      if (!codigo) { msg.textContent = "Ingresá el código."; return; }
+      if (!nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Revisá tu nombre y tu mail."; return; }
+      if (!$("ok").checked) { msg.textContent = "Tenés que aceptar los términos para continuar."; return; }
+      $("canjear").disabled = true;
+      try {
+        const { token } = await fn("canjear-gift", { method: "POST", body: { codigo, nombre, email } });
+        location.href = `datos.html?t=${encodeURIComponent(token)}`;
+      } catch (err) {
+        msg.textContent = err.message;
+        $("canjear").disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

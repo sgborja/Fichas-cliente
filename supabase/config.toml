@@ -9,3 +9,5 @@ verify_jwt = false
 
 [functions.submit-datos]
 verify_jwt = false
+[functions.canjear-gift]
+verify_jwt = false

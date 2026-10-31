@@ -24,13 +24,20 @@
   <script src="js/config.js"></script>
   <script src="js/common.js"></script>
   <script>
-    const t = new URLSearchParams(location.search).get("t") || "";
+    const qs = new URLSearchParams(location.search);
+    const t = qs.get("t") || "";
+    const gt = qs.get("g") || "";
     const $ = (id) => document.getElementById(id);
     let intentos = 0;
 
     async function revisar() {
       try {
-        const p = await fn("pedido", { query: `?t=${encodeURIComponent(t)}` });
+        const p = await fn("pedido", { query: gt ? `?g=${encodeURIComponent(gt)}` : `?t=${encodeURIComponent(t)}` });
+        if (p.estado === "pagado" && p.tipo === "gift") {
+          $("titulo").textContent = `¡Gracias, ${p.nombre}! 🎁`;
+          $("texto").textContent = `Tu gift card está lista. Le enviamos el código a ${p.destinatario_email}. Por si querés compartirlo vos: ${p.codigo}`;
+          return;
+        }
         if (p.estado === "pagado") {
           $("titulo").textContent = `¡Gracias, ${p.nombre}!`;
           if (p.datos_enviados) {

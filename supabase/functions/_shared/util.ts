@@ -62,3 +62,17 @@ export async function sendMail(to: string, subject: string, html: string, replyT
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
 }
+
+// Códigos de gift card: NHC-XXXX-XXXX, sin caracteres ambiguos (0/O, 1/I)
+const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 32 símbolos
+export function generarCodigo() {
+  const s = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => ALFABETO[b % 32]).join("");
+  return `NHC-${s.slice(0, 4)}-${s.slice(4)}`;
+}
+export function normalizarCodigo(c: unknown) {
+  let s = String(c ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (s.startsWith("NHC")) s = s.slice(3);
+  return s.length === 8 ? `NHC-${s.slice(0, 4)}-${s.slice(4)}` : "";
+}
+
+export const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);

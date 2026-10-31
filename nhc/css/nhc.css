@@ -125,7 +125,7 @@ textarea { min-height: 84px; resize: vertical; }
 
 .center { text-align: center; }
 .chip { display: inline-block; background: var(--soft); color: var(--secondary); font: 500 13px var(--sans); padding: 4px 12px; border-radius: 999px; }
-.footer { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 0 100px; }
+.footer { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 0 40px; }
 .hidden { display: none !important; }
 
 /* Admin */
@@ -149,3 +149,10 @@ textarea { min-height: 84px; resize: vertical; }
 .legal .toc { margin-bottom: 8px; font-size: 14px; }
 .legal-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; }
 .legal-table th, .legal-table td { border: 1px solid var(--line, #EDE0D4); padding: 8px 10px; text-align: left; vertical-align: top; }
+
+/* Catálogo informativo y oferta */
+.card.static { cursor: default; }
+.card.static:hover { transform: none; }
+.grid { padding-bottom: 20px; }
+.oferta { margin: 10px 0 40px; }
+.oferta .price { font-size: 36px; margin: 10px 0 14px; }
