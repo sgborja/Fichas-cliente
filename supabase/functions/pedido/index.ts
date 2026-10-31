@@ -1,4 +1,4 @@
-import { json, preflight, sb } from "../_shared/util.ts";
+import { json, preflight, sb, venceGift } from "../_shared/util.ts";
 
 // Estado de un pedido (?t=) o de una gift card comprada (?g=) para la página "gracias", y de un pedido para "datos".
 // Se consulta con el token privado.
@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   if (g !== null) {
     if (!tokenOk(g)) return json({ error: "enlace inválido" }, 400);
     const { data } = await sb.from("giftcards")
-      .select("estado,comprador_nombre,destinatario_email,codigo").eq("token", g).maybeSingle();
+      .select("estado,comprador_nombre,destinatario_email,codigo,pagado_en").eq("token", g).maybeSingle();
     if (!data) return json({ error: "enlace inválido" }, 404);
     return json({
       tipo: "gift",
@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
       nombre: data.comprador_nombre,
       destinatario_email: data.destinatario_email,
       codigo: data.estado === "pendiente" ? null : data.codigo,
+      vence: data.pagado_en ? venceGift(data.pagado_en).toISOString() : null,
     });
   }
 

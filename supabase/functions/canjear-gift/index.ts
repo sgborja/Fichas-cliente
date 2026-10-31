@@ -1,4 +1,4 @@
-import { emailLayout, emailOk, esc, json, normalizarCodigo, preflight, sb, SITE_URL, sendMail } from "../_shared/util.ts";
+import { emailLayout, emailOk, esc, json, normalizarCodigo, preflight, sb, SITE_URL, sendMail, venceGift } from "../_shared/util.ts";
 
 // Canje de una gift card: { codigo, nombre, email }. Crea un pedido ya pagado (monto 0) y devuelve su token
 // para continuar directo en datos.html.
@@ -19,6 +19,7 @@ Deno.serve(async (req) => {
     const { data: g } = await sb.from("giftcards").select("*").eq("codigo", codigo).maybeSingle();
     if (!g || g.estado === "pendiente") return json({ error: "No encontramos ese código." }, 404);
     if (g.estado === "canjeada") return json({ error: "Ese código ya fue canjeado." }, 409);
+    if (venceGift(g.pagado_en) < new Date()) return json({ error: "Ese código venció." }, 410);
 
     // Reserva el canje: solo una solicitud puede pasar de pagada a canjeada
     const { data: res } = await sb.from("giftcards")

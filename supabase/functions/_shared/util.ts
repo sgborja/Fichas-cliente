@@ -76,3 +76,12 @@ export function normalizarCodigo(c: unknown) {
 }
 
 export const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+// Las gift cards vencen un año después de pagadas
+export function venceGift(pagadoEn: string) {
+  const d = new Date(pagadoEn);
+  d.setFullYear(d.getFullYear() + 1);
+  return d;
+}
+export const fechaLarga = (d: Date) =>
+  d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });

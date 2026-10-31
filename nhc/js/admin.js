@@ -61,6 +61,7 @@ async function cargarGifts() {
       g.mensaje ? fila("Mensaje", g.mensaje) : "",
       fila("Creada", fecha(g.creado) + ` · ${money(g.monto, g.moneda)}`),
       g.pagado_en ? fila("Pagada", fecha(g.pagado_en)) : "",
+      g.pagado_en ? fila("Vence", (() => { const v = new Date(g.pagado_en); v.setFullYear(v.getFullYear() + 1); return v.toLocaleDateString("es-AR") + (g.estado === "pagada" && v < new Date() ? " (vencida)" : ""); })()) : "",
       g.canjeado_en ? fila("Canjeada", fecha(g.canjeado_en)) : "")
   ) : [el("p", { class: "msg" }, "Todavía no hay gift cards.")]));
 }

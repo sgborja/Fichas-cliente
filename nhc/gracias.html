@@ -35,7 +35,7 @@
         const p = await fn("pedido", { query: gt ? `?g=${encodeURIComponent(gt)}` : `?t=${encodeURIComponent(t)}` });
         if (p.estado === "pagado" && p.tipo === "gift") {
           $("titulo").textContent = `¡Gracias, ${p.nombre}! 🎁`;
-          $("texto").textContent = `Tu gift card está lista. Le enviamos el código a ${p.destinatario_email}. Por si querés compartirlo vos: ${p.codigo}`;
+          $("texto").textContent = `Tu gift card está lista. Le enviamos el código a ${p.destinatario_email}. Por si querés compartirlo vos: ${p.codigo}. Vence el ${new Date(p.vence).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}.`;
           return;
         }
         if (p.estado === "pagado") {

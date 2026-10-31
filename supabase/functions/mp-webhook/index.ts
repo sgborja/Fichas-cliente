@@ -1,4 +1,4 @@
-import { emailLayout, esc, generarCodigo, sb, SITE_URL, sendMail } from "../_shared/util.ts";
+import { emailLayout, esc, fechaLarga, generarCodigo, sb, SITE_URL, sendMail, venceGift } from "../_shared/util.ts";
 
 // Mercado Pago avisa acá. No confiamos en el aviso: consultamos el pago a la API con nuestro token.
 Deno.serve(async (req) => {
@@ -73,6 +73,7 @@ async function pagarGift(id: string, pago: any, paymentId: string) {
   }
   if (!gift) throw new Error("no se pudo generar el código");
 
+  const vence = fechaLarga(venceGift(gift.pagado_en));
   const de = esc(gift.comprador_nombre);
   const para = gift.destinatario_nombre ? esc(gift.destinatario_nombre) : "";
   const msg = gift.mensaje ? `<p style="background:#FFF8F0;border-radius:12px;padding:12px 16px"><i>«${esc(gift.mensaje)}»</i><br>— ${de}</p>` : "";
@@ -87,7 +88,7 @@ async function pagarGift(id: string, pago: any, paymentId: string) {
         "¡Tenés un regalo!",
         `<p>${para ? `Hola ${para}, ` : "Hola, "}${de} te regaló tus informes de autoconocimiento NeoHumanCode.</p>${msg}
          <p>Tu código de regalo:</p>${codigoHtml}
-         <p>Ingresalo en el sitio, cargá tus datos de nacimiento y listo.</p>`,
+         <p>Ingresalo en el sitio, cargá tus datos de nacimiento y listo. <b>Podés canjearlo hasta el ${vence}.</b></p>`,
         { texto: "Canjear mi regalo", url: `${SITE_URL}/canjear.html?c=${encodeURIComponent(gift.codigo)}` },
       ),
       gift.comprador_email,
@@ -98,7 +99,7 @@ async function pagarGift(id: string, pago: any, paymentId: string) {
       emailLayout(
         "¡Gift card confirmada!",
         `<p>Hola ${de}, recibimos tu pago. Le enviamos el regalo a <b>${esc(gift.destinatario_email)}</b>.</p>
-         <p>Este es el código, por si querés compartirlo vos:</p>${codigoHtml}`,
+         <p>Este es el código, por si querés compartirlo vos (vence el ${vence}):</p>${codigoHtml}`,
       ),
     ),
   ]);
