@@ -44,7 +44,7 @@ create table public.datos_nacimiento (
 
 create or replace function public.is_admin() returns boolean
 language sql security definer set search_path = public stable as $$
-  select exists (select 1 from public.admins where email = auth.jwt() ->> 'email');
+  select exists (select 1 from public.admins where lower(email) = lower(auth.jwt() ->> 'email'));
 $$;
 
 alter table public.informes enable row level security;
