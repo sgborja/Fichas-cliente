@@ -170,3 +170,4 @@ textarea { min-height: 84px; resize: vertical; }
 .kv span { color: var(--text2); min-width: 120px; }
 .kv b { font-weight: 500; word-break: break-word; }
 .datos { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.legal .tldr { background: var(--soft); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: var(--secondary); }
