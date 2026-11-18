@@ -2,3 +2,6 @@
 
 # Documentación con credenciales: no subir
 docs/*.docx
+
+# Cupones generados con códigos reales: no subir
+regalos/
