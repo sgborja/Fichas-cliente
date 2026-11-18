@@ -11,3 +11,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.canjear-gift]
 verify_jwt = false
+
+[functions.regalar-gifts]
+verify_jwt = false

@@ -21,17 +21,23 @@ Precio único (por defecto 49.000 ARS, editable en `admin.html`): **se pagan 3 i
 2. Al confirmarse el pago, `mp-webhook` genera el código `NHC-XXXX-XXXX`, se lo manda por mail a quien recibe y al comprador. El comprador también lo ve en `gracias.html?g=<token>`.
 3. Quien recibe entra a `canjear.html` (o al enlace del mail), ingresa código, nombre y mail → `canjear-gift` crea un pedido ya pagado (monto 0) y lo manda a `datos.html`. Cada código se canjea una sola vez.
 
+**Gift cards de cortesía (regalos de la administración)**
+1. En `admin.html` → *Gift cards* → *Regalar gift cards*: una persona por línea (`nombre, mail`), mensaje opcional.
+2. La función `regalar-gifts` (solo administradores) crea una gift card ya pagada por persona (comprador "NeoHumanCode", monto 0) y le manda un mail a su nombre con el código y un enlace que prellena nombre y mail en `canjear.html`.
+3. Desde ahí es el mismo canje que una gift card comprada: `canjear-gift` crea el pedido pagado y lleva a `datos.html`. Vence al año.
+4. Repetir la lista no duplica: si la persona ya tiene un regalo sin canjear se reutiliza el código y solo se reenvía el mail si no había salido.
+
 `admin.html`: login, edición de nombre, descripción, orden, visibilidad de cada informe y precio.
 
 ## Puesta en marcha
 
-1. **Supabase**: ejecutar `supabase/migrations/001_init.sql` y `002_giftcards.sql`. En *Authentication* crear el usuario admin, desactivar *Allow new users to sign up* y correr `insert into admins (email) values ('tu@mail.com');`.
+1. **Supabase**: ejecutar `supabase/migrations/001_init.sql`, `002_giftcards.sql` y `003_regalos_cortesia.sql`. En *Authentication* crear el usuario admin, desactivar *Allow new users to sign up* y correr `insert into admins (email) values ('tu@mail.com');`.
 2. **Secrets de las funciones** (`supabase secrets set ...`):
    - `MP_ACCESS_TOKEN`: Access Token de Mercado Pago (usar el de prueba primero).
    - `RESEND_API_KEY` y `MAIL_FROM` (ej. `NeoHumanCode <hola@tudominio.com>`, dominio verificado en Resend).
    - `ADMIN_EMAIL`: mail que recibe los avisos.
    - `SITE_URL`: URL pública de la carpeta `nhc` (https, sin barra final).
-3. Desplegar: `supabase functions deploy create-checkout mp-webhook pedido submit-datos canjear-gift`.
+3. Desplegar: `supabase functions deploy create-checkout mp-webhook pedido submit-datos canjear-gift regalar-gifts`.
 4. Completar `nhc/js/config.js` con la URL y la anon key del proyecto.
 5. Subir `imagotipo.png` a `nhc/assets/` (si falta se muestra el nombre en texto).
 6. Publicar la carpeta `nhc` (Vercel, Netlify o GitHub Pages) y probar un pago con usuarios de prueba de Mercado Pago.

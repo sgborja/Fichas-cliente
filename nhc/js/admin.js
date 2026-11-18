@@ -62,9 +62,48 @@ async function cargarGifts() {
       fila("Creada", fecha(g.creado) + ` · ${money(g.monto, g.moneda)}`),
       g.pagado_en ? fila("Pagada", fecha(g.pagado_en)) : "",
       g.pagado_en ? fila("Vence", (() => { const v = new Date(g.pagado_en); v.setFullYear(v.getFullYear() + 1); return v.toLocaleDateString("es-AR") + (g.estado === "pagada" && v < new Date() ? " (vencida)" : ""); })()) : "",
+      g.pagado_en ? fila("Mail con el código", g.enviado_en ? "Enviado " + fecha(g.enviado_en) : (g.comprador_nombre === "NeoHumanCode" ? "Sin enviar" : "Enviado al pagar")) : "",
       g.canjeado_en ? fila("Canjeada", fecha(g.canjeado_en)) : "")
   ) : [el("p", { class: "msg" }, "Todavía no hay gift cards.")]));
 }
+
+// Regalos de cortesía: "Nombre, mail" por línea → función regalar-gifts (solo administradores)
+function parsearLista(txt) {
+  return txt.split(/\n/).map((l) => l.trim()).filter(Boolean).map((l) => {
+    const partes = l.split(/[,;\t]/).map((x) => x.trim()).filter(Boolean);
+    const email = (partes.find((x) => x.includes("@")) || "").toLowerCase();
+    return { nombre: partes.filter((x) => x !== email && !x.includes("@")).join(" "), email };
+  });
+}
+$("regalar").addEventListener("click", async () => {
+  const lista = parsearLista($("regaloLista").value);
+  const msg = $("mRegalo");
+  if (!lista.length) { msg.textContent = "Pegá al menos una persona."; return; }
+  const enviar = $("regaloEnviar").checked;
+  if (enviar && !confirm(`Se van a enviar ${lista.length} mail(s). ¿Seguimos?`)) return;
+  $("regalar").disabled = true;
+  msg.textContent = "Procesando…";
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/regalar-gifts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ lista, mensaje: $("regaloMensaje").value, enviar }),
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error || "No se pudo completar.");
+    const etiqueta = { enviada: "Mail enviado", creada: "Creada (sin enviar)", ya_enviada: "Ya se había enviado", error: "Error" };
+    $("resRegalo").replaceChildren(...out.resultados.map((x) => el("div", { class: "kv" },
+      el("span", {}, `${x.nombre || "—"} · ${x.email || "—"}${x.codigo ? " · " + x.codigo : ""}`),
+      el("b", {}, etiqueta[x.estado] + (x.error ? `: ${x.error}` : "")))));
+    const ok = out.resultados.filter((x) => x.estado !== "error").length;
+    msg.textContent = `${ok} de ${out.resultados.length} listas.`;
+    cargarGifts();
+  } catch (e) {
+    msg.textContent = e.message;
+  }
+  $("regalar").disabled = false;
+});
 
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
   document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));

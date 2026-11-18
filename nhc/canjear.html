@@ -39,6 +39,9 @@
     const $ = (id) => document.getElementById(id);
     const c = new URLSearchParams(location.search).get("c");
     if (c) $("codigo").value = c;
+    const q = new URLSearchParams(location.search);
+    if (q.get("n")) $("nombre").value = q.get("n").slice(0, 120);
+    if (q.get("e")) $("email").value = q.get("e").slice(0, 200);
     $("form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const msg = $("msg");

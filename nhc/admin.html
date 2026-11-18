@@ -38,6 +38,17 @@
       </section>
 
       <section id="t-gifts" class="hidden">
+        <div class="admin-card">
+          <h3>Regalar gift cards</h3>
+          <p class="msg" style="color:var(--text2);margin:6px 0 0">Una persona por línea: <b>nombre, mail</b>. Cada una recibe un mail a su nombre con el código, ya pago.</p>
+          <label for="regaloLista">Personas</label>
+          <textarea id="regaloLista" rows="6" placeholder="Sabrina, sabrina@ejemplo.com&#10;Gustavo, gustavo@ejemplo.com"></textarea>
+          <label for="regaloMensaje">Mensaje <span class="opt">(opcional, va en el mail)</span></label>
+          <textarea id="regaloMensaje" rows="2" maxlength="500"></textarea>
+          <label class="toggle" style="margin-top:12px" for="regaloEnviar"><input type="checkbox" id="regaloEnviar" checked> Enviar los mails ahora</label>
+          <div class="actions"><button class="btn" id="regalar">Crear regalos</button><span class="msg" id="mRegalo"></span></div>
+          <div id="resRegalo"></div>
+        </div>
         <div class="resumen" id="resGifts"></div>
         <div id="listaGifts"></div>
       </section>
