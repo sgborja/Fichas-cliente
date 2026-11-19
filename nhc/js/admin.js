@@ -42,9 +42,25 @@ async function cargarPedidos() {
   }) : [el("p", { class: "msg" }, "Todavía no hay pedidos.")]));
 }
 
+const giftsPorCodigo = {};
+
+// Botones para entregar un regalo sin depender del mail: bajar el cupón y copiar el enlace de canje
+function accionesGift(g, msg) {
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(enlaceCanje(g)); msg.textContent = "Enlace copiado ✓"; }
+    catch { msg.textContent = enlaceCanje(g); }
+  };
+  const bajar = async () => {
+    msg.textContent = "Generando…";
+    try { await descargarCupon(g); msg.textContent = "Cupón descargado ✓"; } catch (e) { msg.textContent = e.message; }
+  };
+  return [el("button", { class: "btn", onclick: bajar }, "Descargar cupón"), el("button", { class: "btn ghost", onclick: copiar }, "Copiar enlace de canje")];
+}
+
 async function cargarGifts() {
   const { data, error } = await db.from("giftcards").select("*").order("creado", { ascending: false });
   if (error) { $("listaGifts").textContent = "No se pudieron cargar las gift cards."; return; }
+  data.forEach((g) => { if (g.codigo) giftsPorCodigo[g.codigo] = g; });
   const cuenta = (e) => data.filter((g) => g.estado === e).length;
   $("resGifts").replaceChildren(
     el("div", {}, el("b", {}, String(data.length)), " gift cards"),
@@ -63,7 +79,8 @@ async function cargarGifts() {
       g.pagado_en ? fila("Pagada", fecha(g.pagado_en)) : "",
       g.pagado_en ? fila("Vence", (() => { const v = new Date(g.pagado_en); v.setFullYear(v.getFullYear() + 1); return v.toLocaleDateString("es-AR") + (g.estado === "pagada" && v < new Date() ? " (vencida)" : ""); })()) : "",
       g.pagado_en ? fila("Mail con el código", g.enviado_en ? "Enviado " + fecha(g.enviado_en) : (g.comprador_nombre === "NeoHumanCode" ? "Sin enviar" : "Enviado al pagar")) : "",
-      g.canjeado_en ? fila("Canjeada", fecha(g.canjeado_en)) : "")
+      g.canjeado_en ? fila("Canjeada", fecha(g.canjeado_en)) : "",
+      g.codigo && g.pagado_en && g.estado === "pagada" ? (() => { const m = el("span", { class: "msg" }); return el("div", { class: "actions" }, ...accionesGift(g, m), m); })() : "")
   ) : [el("p", { class: "msg" }, "Todavía no hay gift cards.")]));
 }
 
@@ -93,12 +110,18 @@ $("regalar").addEventListener("click", async () => {
     const out = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(out.error || "No se pudo completar.");
     const etiqueta = { enviada: "Mail enviado", creada: "Creada (sin enviar)", ya_enviada: "Ya se había enviado", error: "Error" };
-    $("resRegalo").replaceChildren(...out.resultados.map((x) => el("div", { class: "kv" },
-      el("span", {}, `${x.nombre || "—"} · ${x.email || "—"}${x.codigo ? " · " + x.codigo : ""}`),
-      el("b", {}, etiqueta[x.estado] + (x.error ? `: ${x.error}` : "")))));
+    await cargarGifts();
+    $("resRegalo").replaceChildren(...out.resultados.map((x) => {
+      const g = x.codigo && giftsPorCodigo[x.codigo];
+      const m = el("span", { class: "msg" });
+      return el("div", { class: "admin-card" },
+        el("div", { class: "kv" },
+          el("span", {}, `${x.nombre || "—"} · ${x.email || "—"}${x.codigo ? " · " + x.codigo : ""}`),
+          el("b", {}, etiqueta[x.estado] + (x.error ? `: ${x.error}` : ""))),
+        g ? el("div", { class: "actions" }, ...accionesGift(g, m), m) : "");
+    }));
     const ok = out.resultados.filter((x) => x.estado !== "error").length;
     msg.textContent = `${ok} de ${out.resultados.length} listas.`;
-    cargarGifts();
   } catch (e) {
     msg.textContent = e.message;
   }

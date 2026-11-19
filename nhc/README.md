@@ -25,7 +25,8 @@ Precio único (por defecto 49.000 ARS, editable en `admin.html`): **se pagan 3 i
 1. En `admin.html` → *Gift cards* → *Regalar gift cards*: una persona por línea (`nombre, mail`), mensaje opcional.
 2. La función `regalar-gifts` (solo administradores) crea una gift card ya pagada por persona (comprador "NeoHumanCode", monto 0) y le manda un mail a su nombre con el código y un enlace que prellena nombre y mail en `canjear.html`.
 3. Desde ahí es el mismo canje que una gift card comprada: `canjear-gift` crea el pedido pagado y lleva a `datos.html`. Vence al año.
-4. Repetir la lista no duplica: si la persona ya tiene un regalo sin canjear se reutiliza el código y solo se reenvía el mail si no había salido.
+4. Sin mail (o si el mail no llega): en cada regalo del panel, **Descargar cupón** baja una imagen con la gift card, el nombre, el código y el vencimiento (se dibuja en el navegador, `js/cupon.js`), y **Copiar enlace de canje** copia el enlace con código, nombre y mail ya cargados.
+5. Repetir la lista no duplica: si la persona ya tiene un regalo sin canjear se reutiliza el código y solo se reenvía el mail si no había salido.
 
 `admin.html`: login, edición de nombre, descripción, orden, visibilidad de cada informe y precio.
 
