@@ -42,7 +42,10 @@ function enriquecer(consulta, c, tipo) {
     r.precioComparable = Math.round((r.precio / tm.cant) * tq.cant);
     r.ajustado = true;
   }
-  if (r.precioLista && r.precioLista > r.precio * 1.02) r.descuento = Math.round((1 - r.precio / r.precioLista) * 100);
+  if (r.precioLista && r.precioLista > r.precio * 1.02) {
+    const d = Math.round((1 - r.precio / r.precioLista) * 100);
+    if (d <= 60) r.descuento = d; // descuentos mayores a 60 % casi seguro son un dato mal informado por el sitio
+  }
   return r;
 }
 

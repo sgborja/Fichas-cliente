@@ -44,4 +44,6 @@ const cands = [{ nombre: 'Arroz Gallo 1 kg', precio: 2000, precioLista: 2500 }, 
 const rk = rankear('arroz 1kg', cands);
 assert.strictEqual(rk.length, 2); assert.strictEqual(rk[0].descuento === undefined || rk[0].descuento === 20 || rk[1].descuento === 20, true);
 assert.strictEqual(rankear('arroz', [{ nombre: 'Fideos', precio: 1 }]).length, 0);
+assert.strictEqual(rankear('arroz', [{ nombre: 'Arroz', precio: 2750, precioLista: 275000 }])[0].descuento, undefined);
+assert.strictEqual(rankear('arroz', [{ nombre: 'Arroz', precio: 800, precioLista: 1000 }])[0].descuento, 20);
 console.log('OK');
