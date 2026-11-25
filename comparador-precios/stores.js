@@ -49,6 +49,41 @@ function vtex({ id, nombre, base, sc }) {
   };
 }
 
+// Sitios que publican los productos en la propia página (datos estándar schema.org en <script type="application/ld+json">).
+// urlBusqueda lleva {q} donde va el texto buscado.
+function jsonld({ id, nombre, urlBusqueda }) {
+  const headers = {
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    accept: 'text/html,application/xhtml+xml', 'accept-language': 'es-AR,es;q=0.9',
+  };
+  return {
+    id, nombre, verificado: false,
+    async buscar(q) {
+      const u = new URL(urlBusqueda.replace('{q}', encodeURIComponent(q)));
+      let r;
+      try { r = await fetch(u, { headers, signal: AbortSignal.timeout(15000) }); }
+      catch (e) { throw new Error(`${nombre}: no se pudo conectar a ${u.host} (${e.cause?.code || e.message})`); }
+      if (!r.ok) throw new Error(`${nombre}: HTTP ${r.status} en ${u.pathname}`);
+      const html = await r.text();
+      const out = [];
+      const re = /<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi;
+      let m;
+      while ((m = re.exec(html))) {
+        let j; try { j = JSON.parse(m[1]); } catch { continue; }
+        for (const el of [].concat(j.itemListElement || [])) {
+          const it = el.item || el;
+          const o = [].concat(it.offers || [])[0];
+          if (!it.name || !o || !(+o.price > 0)) continue;
+          if (o.availability && !/InStock/i.test(o.availability)) continue;
+          out.push({ nombre: it.name, precio: +o.price, url: it.url, imagen: it.image });
+        }
+      }
+      if (!out.length && !/application\/ld\+json/i.test(html)) throw new Error(`${nombre}: la página no trae datos de productos (revisar urlBusqueda)`);
+      return out;
+    },
+  };
+}
+
 // Sitios que NO son VTEX o cuya API hay que confirmar: se dejan como "pendientes" hasta verificarlos
 // con una consulta real (ver README, sección "Agregar / ajustar un súper").
 function pendiente(id, nombre) {
@@ -60,7 +95,7 @@ const REAL = [
   vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar' }),
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
-  pendiente('laanonima', 'La Anónima'),
+  jsonld({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar?clave={q}' }),
   pendiente('supermami', 'Supermami'),
 ];
 
