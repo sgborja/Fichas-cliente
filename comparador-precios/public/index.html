@@ -68,12 +68,12 @@ function render(){
     if(r) for(const t of st){const m=r.tiendas[t.id]?.match; precios[t.id]=m?(m.precioComparable??m.precio):null}
     const col=r?Analisis.colorFila(precios,st.map(t=>t.id),+$('#tol').value):{};
     const cells=st.map(t=>{
-      if(!r) return '<td></td>'; const x=r.tiendas[t.id]; const ed=`class="cell" data-i="${i}" data-t="${t.id}" title="Doble clic para editar el precio"`;
-      if(x?.error) return `<td ${ed}><span class="err" title="${x.error.replace(/"/g,"'")}">error</span></td>`;
-      if(!x?.match) return `<td ${ed} class="mut cell">no encontrado</td>`;
+      if(!r) return '<td></td>'; const x=r.tiendas[t.id]; const ed=`data-i="${i}" data-t="${t.id}"`;
+      if(x?.error) return `<td class="cell" ${ed}><span class="err"><b>error</b></span><span class="sub err" style="max-width:220px">${x.error.replace(/</g,'&lt;').slice(0,260)}</span></td>`;
+      if(!x?.match) return `<td class="mut cell" ${ed}>no encontrado</td>`;
       const m=x.match, pc=m.precioComparable??m.precio, pu=m.porUnidad?` · ${money(m.porUnidad.precio)}/${m.porUnidad.unidad==='l'?'litro':'kg'}`:'';
       const eq=m.ajustado?`<span class="eq">equivale a ${money(pc)} por el tamaño pedido (real ${money(m.precio)})</span>`:'';
-      return `<td ${ed}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${eq}<span class="sub">${m.nombre}${pu}</span></td>`;
+      return `<td class="cell" ${ed}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${eq}<span class="sub">${m.nombre}${pu}</span></td>`;
     }).join('');
     return `<tr><td><input data-i="${i}" data-k="nombre" value="${f.nombre.replace(/"/g,'&quot;')}"></td><td><input class="q" type="number" min="1" data-i="${i}" data-k="qty" value="${f.qty||1}"></td>${cells}<td><button data-del="${i}">✕</button></td></tr>`}).join('');
 }
