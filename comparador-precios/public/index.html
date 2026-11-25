@@ -16,6 +16,7 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 .tag{font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:0 4px;margin-left:4px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:2px}
 .chips label{flex-direction:row;align-items:center;gap:4px;color:var(--tx);font-size:14px}.err{color:var(--badt);font-size:12px}
+.eq{font-size:11px;color:var(--mut);display:block}.warn{color:var(--neart);font-size:13px;margin-top:6px}td.cell{cursor:pointer}
 .plan{font-size:17px;font-weight:700}li{margin:4px 0}
 </style></head><body>
 <h1>Comparador de precios de supermercados · Córdoba</h1>
@@ -24,6 +25,7 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 <div class="card">
   <div class="row chips" id="tiendas"></div>
   <div class="row" style="margin-top:10px">
+    <label>Código postal (zona) <input id="cp" value="5000" maxlength="4" style="width:80px"></label>
     <label>Costo extra por cada súper adicional ($) <input type="number" id="costo" value="1500" min="0" style="width:120px"></label>
     <label>Diferencia que se considera "poca" (%) <input type="number" id="tol" value="3" min="0" step="0.5" style="width:120px"></label>
     <button class="p" id="go">Buscar precios</button>
@@ -36,18 +38,24 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
   <button id="add" style="margin-top:8px">+ Producto</button></div>
 <div class="card" id="analisis" hidden></div>
 
-<script src="/analysis.js"></script>
+<script src="analysis.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 let tiendas=[], filas=JSON.parse(localStorage.getItem('filas')||'null')||[{nombre:'leche entera 1l',qty:2},{nombre:'arroz largo fino 1kg',qty:1},{nombre:'aceite girasol 900ml',qty:1}];
-let res=null, sel=new Set(JSON.parse(localStorage.getItem('sel')||'[]'));
+let demo=false, res=null, sel=new Set(JSON.parse(localStorage.getItem('sel')||'[]'));
+const DEMO={mock:true,tiendas:['Carrefour','Disco','Vea','Chango Más','La Anónima'].map(n=>({id:n.toLowerCase().replace(/[^a-z]/g,''),nombre:n,pendiente:false}))};
+const hash=x=>{let h=7;for(const c of x)h=(h*31+c.charCodeAt(0))>>>0;return h};
+function buscarDemo(items,stores){return items.map(it=>({nombre:it.nombre,qty:it.qty||1,tiendas:Object.fromEntries(stores.map(id=>{
+  const base=800+hash(it.nombre)%4000,pr=Math.round(base*(0.9+hash(id+it.nombre)%25/100));
+  if(hash(id+it.nombre+'x')%11===0) return [id,{match:null}];
+  return [id,{match:{nombre:it.nombre+' (demo)',precio:pr,precioComparable:pr,tipo:'exacto'}}]}))}))}
 const money=n=>'$'+Math.round(n).toLocaleString('es-AR');
 const save=()=>{localStorage.setItem('filas',JSON.stringify(filas));localStorage.setItem('sel',JSON.stringify([...sel]))};
 
 async function init(){
-  const d=await (await fetch('/api/tiendas')).json();
+  let d; try{ d=await (await fetch('/api/tiendas')).json() }catch{ d=DEMO }
   tiendas=d.tiendas; if(!sel.size) tiendas.filter(t=>!t.pendiente).forEach(t=>sel.add(t.id));
-  $('#modo').textContent=d.mock?'MODO PRUEBA: precios simulados (iniciar el servidor sin MOCK=1 para precios reales).':'Precios consultados en las tiendas online.';
+  demo=d===DEMO; $('#modo').textContent=demo?'MODO SIN SERVIDOR: precios simulados. Hacé doble clic en cualquier precio para escribir el real.':d.mock?'MODO PRUEBA: precios simulados. Doble clic en un precio para corregirlo.':'Precios consultados en las tiendas online. Doble clic en un precio para corregirlo a mano.';
   $('#tiendas').innerHTML=tiendas.map(t=>`<label><input type="checkbox" value="${t.id}" ${sel.has(t.id)?'checked':''}> ${t.nombre}${t.pendiente?' <span class="tag">sin configurar</span>':''}</label>`).join('');
   $('#tiendas').onchange=e=>{e.target.checked?sel.add(e.target.value):sel.delete(e.target.value);save();render()};
   render();
@@ -57,18 +65,26 @@ function render(){
   $('#t thead').innerHTML='<tr><th>Producto</th><th>Cant.</th>'+st.map(t=>`<th>${t.nombre}</th>`).join('')+'<th></th></tr>';
   $('#t tbody').innerHTML=filas.map((f,i)=>{
     const r=res&&res[i]; const precios={}; 
-    if(r) for(const t of st){const m=r.tiendas[t.id]?.match; precios[t.id]=m?m.precio:null}
+    if(r) for(const t of st){const m=r.tiendas[t.id]?.match; precios[t.id]=m?(m.precioComparable??m.precio):null}
     const col=r?Analisis.colorFila(precios,st.map(t=>t.id),+$('#tol').value):{};
     const cells=st.map(t=>{
-      if(!r) return '<td></td>'; const x=r.tiendas[t.id];
-      if(x?.error) return `<td><span class="err" title="${x.error}">error</span></td>`;
-      if(!x?.match) return '<td class="mut">no encontrado</td>';
-      const m=x.match; return `<td><span class="c ${col[t.id]||''}">${money(m.precio)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}<span class="sub">${m.nombre}</span></td>`;
+      if(!r) return '<td></td>'; const x=r.tiendas[t.id]; const ed=`class="cell" data-i="${i}" data-t="${t.id}" title="Doble clic para editar el precio"`;
+      if(x?.error) return `<td ${ed}><span class="err" title="${x.error.replace(/"/g,"'")}">error</span></td>`;
+      if(!x?.match) return `<td ${ed} class="mut cell">no encontrado</td>`;
+      const m=x.match, pc=m.precioComparable??m.precio, pu=m.porUnidad?` · ${money(m.porUnidad.precio)}/${m.porUnidad.unidad==='l'?'litro':'kg'}`:'';
+      const eq=m.ajustado?`<span class="eq">equivale a ${money(pc)} por el tamaño pedido (real ${money(m.precio)})</span>`:'';
+      return `<td ${ed}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${eq}<span class="sub">${m.nombre}${pu}</span></td>`;
     }).join('');
     return `<tr><td><input data-i="${i}" data-k="nombre" value="${f.nombre.replace(/"/g,'&quot;')}"></td><td><input class="q" type="number" min="1" data-i="${i}" data-k="qty" value="${f.qty||1}"></td>${cells}<td><button data-del="${i}">✕</button></td></tr>`}).join('');
 }
 $('#t').addEventListener('input',e=>{const i=e.target.dataset.i;if(i==null)return;filas[i][e.target.dataset.k]=e.target.dataset.k==='qty'?+e.target.value||1:e.target.value;save()});
 $('#t').addEventListener('click',e=>{if(e.target.dataset.del!=null){filas.splice(+e.target.dataset.del,1);res=null;save();render()}});
+$('#t').addEventListener('dblclick',e=>{const td=e.target.closest('td.cell'); if(!td||!res) return;
+  const i=+td.dataset.i, id=td.dataset.t, prev=res[i].tiendas[id]?.match?.precio||'';
+  const v=prompt('Precio de "'+res[i].nombre+'" en '+tiendas.find(t=>t.id===id).nombre+' (vacío = sin precio):',prev); if(v===null) return;
+  const n=parseFloat(v.replace(/\./g,'').replace(',','.'));
+  res[i].tiendas[id]={match:isFinite(n)&&n>0?{nombre:'precio cargado a mano',precio:n,precioComparable:n,tipo:'exacto',manual:true}:null};
+  render(); analizar()});
 $('#add').onclick=()=>{filas.push({nombre:'',qty:1});res=null;render()};
 $('#clear').onclick=()=>{filas=[];res=null;save();render();$('#analisis').hidden=true};
 $('#csv').onclick=()=>{const t=prompt('Pegá un producto por línea (opcional: "producto; cantidad"):');if(!t)return;
@@ -77,22 +93,27 @@ $('#tol').oninput=render;
 $('#go').onclick=async()=>{
   const items=filas.filter(f=>f.nombre.trim()); if(!items.length) return;
   $('#go').disabled=true;$('#go').textContent='Buscando…';
-  try{const r=await fetch('/api/buscar',{method:'POST',body:JSON.stringify({items,stores:[...sel]})});
-    const data=await r.json(); filas=items; res=data; save(); render(); analizar();
+  try{let data;
+    if(demo) data=buscarDemo(items,[...sel]);
+    else{const r=await fetch('/api/buscar',{method:'POST',body:JSON.stringify({items,stores:[...sel],cp:$('#cp').value.trim()})}); data=await r.json(); if(!r.ok) throw new Error(data)}
+    filas=items; res=data; save(); render(); analizar();
   }catch(e){alert('Error: '+e.message)} $('#go').disabled=false;$('#go').textContent='Buscar precios';
 };
 function analizar(){
   const st=tiendas.filter(t=>sel.has(t.id)).map(t=>t.id);
-  const rows=res.map(r=>({nombre:r.nombre,qty:r.qty,precios:Object.fromEntries(st.map(s=>[s,r.tiendas[s]?.match?.precio??null]))}));
+  const rows=res.map(r=>({nombre:r.nombre,qty:r.qty,precios:Object.fromEntries(st.map(s=>[s,r.tiendas[s]?.match?.precioComparable??r.tiendas[s]?.match?.precio??null]))}));
   const a=Analisis.analizar(rows,{stores:st,costoViaje:+$('#costo').value,tolerancia:+$('#tol').value});
   const nom=id=>tiendas.find(t=>t.id===id).nombre;
+  const sinZona=st.filter(s=>res.every(r=>r.tiendas[s]&&'region' in r.tiendas[s]&&r.tiendas[s].region===null&&!r.tiendas[s].error)).map(nom);
   const e=a.elegido, el=$('#analisis'); el.hidden=false;
   const porSuper={}; e.asign.forEach((x,i)=>{if(x)(porSuper[x.store]=porSuper[x.store]||[]).push(`${rows[i].nombre} ×${rows[i].qty} (${money(x.precio)})`)});
   el.innerHTML=`<div class="plan">Recomendación: ${e.stores.map(nom).join(' + ')} · ${money(e.suma)}${e.stores.length>1?` + ${money(+$('#costo').value*(e.stores.length-1))} de recorrido`:''}</div>
   <ul>${Object.entries(porSuper).map(([s,l])=>`<li><b>${nom(s)}</b>: ${l.join(', ')}</li>`).join('')}</ul>
+  ${sinZona.length&&$('#cp').value.trim()?`<div class="warn">No se pudo ajustar la zona (CP ${$('#cp').value.trim()}) en: ${sinZona.join(', ')}. Esos precios pueden ser los generales y no los de tu sucursal.</div>`:''}
   ${a.notas.length?`<ul>${a.notas.map(n=>`<li>${n}</li>`).join('')}</ul>`:''}
   <div class="mut">Si compraras cada cosa en el más barato sin importar el recorrido: ${money(a.ideal.suma)}. ${a.unaSola?`Todo en un solo súper (${nom(a.unaSola.stores[0])}): ${money(a.unaSola.suma)}${a.unaSola.faltan?` (faltan ${a.unaSola.faltan} productos)`:''}.`:''}</div>`;
 }
+$('#cp').value=localStorage.getItem('cp')||'5000'; $('#cp').onchange=()=>{localStorage.setItem('cp',$('#cp').value);res=null;render();$('#analisis').hidden=true};
 $('#costo').onchange=()=>res&&analizar(); $('#tol').onchange=()=>res&&analizar();
 init();
 </script></body></html>

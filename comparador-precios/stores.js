@@ -26,24 +26,45 @@ function vtex({ id, nombre, base, sc }) {
     }
     return out;
   };
+  // Zona/sucursal: VTEX traduce un código postal a una "región" (grupo de vendedores de esa zona).
+  const regiones = new Map();
+  const region = async (cp) => {
+    if (!cp) return null;
+    if (regiones.has(cp)) return regiones.get(cp);
+    let rid = null;
+    try {
+      const u = new URL('/api/checkout/pub/regions', base);
+      u.searchParams.set('country', 'ARG'); u.searchParams.set('postalCode', cp);
+      rid = (await pedir(u))?.[0]?.id || null;
+    } catch { /* sin región: se usan precios generales */ }
+    regiones.set(cp, rid);
+    return rid;
+  };
+  const inteligente = async (q, rid) => {
+    const u = new URL('/api/io/_v/api/intelligent-search/product_search', base);
+    u.searchParams.set('query', q); u.searchParams.set('count', '10'); u.searchParams.set('page', '1');
+    if (sc) u.searchParams.set('sc', sc);
+    if (rid) u.searchParams.set('regionId', rid);
+    return aOfertas((await pedir(u)).products);
+  };
+  const clasica = async (q) => {
+    const u = new URL('/api/catalog_system/pub/products/search', base);
+    u.searchParams.set('ft', q); u.searchParams.set('_from', '0'); u.searchParams.set('_to', '9');
+    if (sc) u.searchParams.set('sc', sc);
+    return aOfertas(await pedir(u));
+  };
   return {
     id, nombre, verificado: false,
-    async buscar(q) {
+    async buscar(q, { cp } = {}) {
+      const rid = await region(cp);
+      // La búsqueda inteligente acepta zona; la clásica no. Con código postal se prueba primero la inteligente.
+      const orden = cp ? [['inteligente', () => inteligente(q, rid)], ['clasica', () => clasica(q)]]
+                       : [['clasica', () => clasica(q)], ['inteligente', () => inteligente(q, null)]];
       const errores = [];
-      // 1) API clásica de catálogo
-      try {
-        const u = new URL('/api/catalog_system/pub/products/search', base);
-        u.searchParams.set('ft', q); u.searchParams.set('_from', '0'); u.searchParams.set('_to', '9');
-        if (sc) u.searchParams.set('sc', sc);
-        return aOfertas(await pedir(u));
-      } catch (e) { errores.push(e.message); }
-      // 2) Búsqueda inteligente (la usan los sitios VTEX más nuevos)
-      try {
-        const u = new URL('/api/io/_v/api/intelligent-search/product_search', base);
-        u.searchParams.set('query', q); u.searchParams.set('count', '10'); u.searchParams.set('page', '1');
-        if (sc) u.searchParams.set('sc', sc);
-        return aOfertas((await pedir(u)).products);
-      } catch (e) { errores.push(e.message); }
+      for (const [n, f] of orden) {
+        try { const out = await f(); out.regionId = n === 'inteligente' ? rid : null; return out; }
+        catch (e) { errores.push(e.message); }
+      }
       throw new Error(`${nombre}: ${errores.join(' | ')}`);
     },
   };

@@ -1,6 +1,6 @@
 const assert = require('assert');
-const { analizar, colorFila } = require('./analysis');
-const { elegir } = require('./match');
+const { analizar, colorFila } = require('./public/analysis');
+const { elegir, tamano } = require('./match');
 // Poca diferencia: no conviene recorrer 2 súper
 let r = analizar([
   { nombre: 'a', qty: 1, precios: { x: 1000, y: 990 } },
@@ -28,4 +28,15 @@ assert.deepStrictEqual(colorFila({ x: 100, y: 102, z: 150 }, ['x', 'y', 'z'], 3)
 assert.strictEqual(elegir('leche entera 1l', [{ nombre: 'Leche Entera La Serenísima 1L', precio: 1 }]).tipo, 'exacto');
 assert.strictEqual(elegir('leche entera sancor', [{ nombre: 'Leche Entera Serenisima 1L', precio: 1 }]).tipo, 'similar');
 assert.strictEqual(elegir('detergente', [{ nombre: 'Leche', precio: 1 }]), null);
+// Tamaños y precio equivalente
+assert.deepStrictEqual(tamano('Aceite 900 ml'), { cant: 0.9, unidad: 'l' });
+assert.deepStrictEqual(tamano('Leche x 1 Lt.'), { cant: 1, unidad: 'l' });
+assert.deepStrictEqual(tamano('Arroz 500 gr'), { cant: 0.5, unidad: 'kg' });
+assert.strictEqual(Math.round(tamano('Gaseosa 6 x 330ml').cant * 1000), 1980);
+assert.strictEqual(tamano('Detergente'), null);
+let m = elegir('aceite girasol 900ml', [{ nombre: 'Aceite Girasol Cocinero 1.5 L', precio: 3000 }]);
+assert.strictEqual(m.ajustado, true);
+assert.strictEqual(m.precioComparable, 1800); // 3000/1.5*0.9
+m = elegir('leche entera 1l', [{ nombre: 'Leche Entera 1 Lt.', precio: 2325 }]);
+assert.strictEqual(m.tipo, 'exacto'); assert.strictEqual(m.ajustado, undefined);
 console.log('OK');
