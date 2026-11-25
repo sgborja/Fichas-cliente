@@ -96,7 +96,6 @@ const REAL = [
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
   jsonld({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
-  pendiente('supermami', 'Supermami'),
 ];
 
 // Modo prueba: precios simulados y repetibles
