@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { analizar, colorFila } = require('./public/analysis');
-const { elegir, tamano } = require('./match');
+const { elegir, rankear, tamano } = require('./match');
 // Poca diferencia: no conviene recorrer 2 súper
 let r = analizar([
   { nombre: 'a', qty: 1, precios: { x: 1000, y: 990 } },
@@ -39,4 +39,9 @@ assert.strictEqual(m.ajustado, true);
 assert.strictEqual(m.precioComparable, 1800); // 3000/1.5*0.9
 m = elegir('leche entera 1l', [{ nombre: 'Leche Entera 1 Lt.', precio: 2325 }]);
 assert.strictEqual(m.tipo, 'exacto'); assert.strictEqual(m.ajustado, undefined);
+// Opciones alternativas y descuentos
+const cands = [{ nombre: 'Arroz Gallo 1 kg', precio: 2000, precioLista: 2500 }, { nombre: 'Arroz Lucchetti 1 kg', precio: 1900 }, { nombre: 'Fideos 500 g', precio: 800 }];
+const rk = rankear('arroz 1kg', cands);
+assert.strictEqual(rk.length, 2); assert.strictEqual(rk[0].descuento === undefined || rk[0].descuento === 20 || rk[1].descuento === 20, true);
+assert.strictEqual(rankear('arroz', [{ nombre: 'Fideos', precio: 1 }]).length, 0);
 console.log('OK');

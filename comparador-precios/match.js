@@ -25,19 +25,15 @@ function tamano(s) {
   return { cant: n * f[0] * mult, unidad: f[1] };
 }
 
-function elegir(consulta, candidatos) {
-  const q = toks(consulta);
-  if (!q.length) return null;
-  let best = null;
-  for (const c of candidatos) {
-    const nt = new Set(toks(c.nombre));
-    const hit = q.filter((t) => nt.has(t) || [...nt].some((n) => n.startsWith(t) && t.length > 3)).length;
-    const cobertura = hit / q.length;
-    const score = cobertura - Math.min(nt.size, 12) * 0.005;
-    if (!best || score > best.score || (score === best.score && c.precio < best.c.precio)) best = { c, score, cobertura };
-  }
-  if (!best || best.cobertura < 0.5) return null;
-  const r = { ...best.c, tipo: best.cobertura === 1 ? 'exacto' : 'similar' };
+function puntuar(qt, c) {
+  const nt = new Set(toks(c.nombre));
+  const hit = qt.filter((t) => nt.has(t) || [...nt].some((n) => n.startsWith(t) && t.length > 3)).length;
+  const cobertura = hit / qt.length;
+  return { c, cobertura, score: cobertura - Math.min(nt.size, 12) * 0.005 };
+}
+
+function enriquecer(consulta, c, tipo) {
+  const r = { ...c, tipo };
   const tq = tamano(consulta), tm = tamano(r.nombre);
   if (tm) r.porUnidad = { precio: r.precio / tm.cant, unidad: tm.unidad };
   // Si pediste un tamaño y el producto es de otro tamaño, se compara a precio equivalente.
@@ -46,6 +42,22 @@ function elegir(consulta, candidatos) {
     r.precioComparable = Math.round((r.precio / tm.cant) * tq.cant);
     r.ajustado = true;
   }
+  if (r.precioLista && r.precioLista > r.precio * 1.02) r.descuento = Math.round((1 - r.precio / r.precioLista) * 100);
   return r;
 }
-module.exports = { elegir, norm, tamano };
+
+// Los mejores N candidatos, del más parecido al menos. tipo: exacto | similar | distinto (<50 % de coincidencia).
+function rankear(consulta, candidatos, n = 6) {
+  const qt = toks(consulta);
+  if (!qt.length) return [];
+  return candidatos.map((c) => puntuar(qt, c)).filter((x) => x.cobertura > 0)
+    .sort((a, b) => b.score - a.score || a.c.precio - b.c.precio)
+    .slice(0, n)
+    .map((x) => enriquecer(consulta, x.c, x.cobertura === 1 ? 'exacto' : x.cobertura >= 0.5 ? 'similar' : 'distinto'));
+}
+
+function elegir(consulta, candidatos) {
+  const r = rankear(consulta, candidatos, 1)[0];
+  return r && r.tipo !== 'distinto' ? r : null;
+}
+module.exports = { elegir, rankear, enriquecer, norm, tamano };

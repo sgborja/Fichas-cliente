@@ -1,0 +1,17 @@
+# Despliegue en Render (https://render.com). Se crea desde el repositorio: New > Blueprint.
+services:
+  - type: web
+    name: comparador-precios
+    runtime: docker
+    rootDir: comparador-precios
+    plan: starter            # el plan gratis duerme el servicio y no permite disco
+    healthCheckPath: /api/tiendas
+    envVars:
+      - key: APP_PASSWORD    # contraseña de acceso (usuario: cualquiera)
+        sync: false
+      - key: LAANONIMA_COOKIES   # opcional: zona de La Anónima, ej. idZonaPrecio=8; Id-Sucursal-Super=177
+        sync: false
+    disk:
+      name: datos
+      mountPath: /data       # acá se guarda el historial de precios
+      sizeGB: 1
