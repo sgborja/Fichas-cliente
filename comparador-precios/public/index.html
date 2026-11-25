@@ -106,7 +106,7 @@ function celda(i,t,r,col){
   const m=x.match, pc=m.precioComparable??m.precio, pu=m.porUnidad?` · ${money(m.porUnidad.precio)}/${m.porUnidad.unidad==='l'?'litro':'kg'}`:'';
   const eq=m.ajustado?`<span class="eq">equivale a ${money(pc)} por el tamaño pedido (real ${money(m.precio)})</span>`:'';
   let dl=''; if(m.anterior&&m.anterior.precio!==m.precio){const p=(m.precio/m.anterior.precio-1)*100; dl=`<span class="tag ${p>0?'up':'down'}" data-hk="${esc(m.hk)}" title="Antes ${money(m.anterior.precio)} (${m.anterior.fecha}). Clic para ver el historial">${p>0?'▲':'▼'} ${Math.abs(p).toFixed(0)}%</span>`}
-  return `<td class="cell" ${at}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${m.descuento>=3?`<span class="tag of">oferta −${m.descuento}%</span>`:''}${dl}${eq}<span class="sub">${esc(m.nombre)}${pu}</span>${btnOps}${panel}</td>`;
+  return `<td class="cell" ${at}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${m.descuento>=3?`<span class="tag of">oferta −${m.descuento}%</span>`:''}${dl}${eq}<span class="sub">${esc(m.nombre)}${pu}</span>${btnOps}<button class="lnk" data-info="1" ${at} title="Datos técnicos del precio">ⓘ detalle</button>${panel}</td>`;
 }
 function render(){
   const st=tiendas.filter(t=>sel.has(t.id)), res=L().res;
@@ -122,6 +122,7 @@ $('#t').addEventListener('input',e=>{const i=e.target.dataset.i;if(i==null)retur
 $('#t').addEventListener('click',async e=>{
   const d=e.target.dataset;
   if(d.del!=null){filas().splice(+d.del,1);L().res=null;save();render();mostrarAnalisis();return}
+  if(d.info){ const m=L().res[+d.i].tiendas[d.t]?.match; if(m) alert('Detalle técnico\n\nProducto: '+m.nombre+'\nPrecio usado: '+m.precio+'\nPrecio de lista: '+(m.precioLista??'-')+'\n'+(m.detalle?Object.entries(m.detalle).map(([k,v])=>k+': '+v).join('\n'):'(sin más datos)')+(m.url?'\nEnlace: '+m.url:'')); return }
   if(d.op){const i=+d.i; abierta=abierta&&abierta.i===i&&abierta.t===d.t?null:{i,t:d.t}; render();return}
   if(d.pick!=null){const x=L().res[+d.i].tiendas[d.t]; x.match=x.opciones[+d.pick]; abierta=null; save(); render(); mostrarAnalisis(); return}
   if(d.hk){ try{ const h=await (await api('/api/historial?k='+encodeURIComponent(d.hk))).json(); alert('Historial de precios:\n'+h.slice(-15).map(([f,p])=>f+'  '+money(p)).join('\n')) }catch{} }

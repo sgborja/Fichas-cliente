@@ -16,13 +16,20 @@ function vtex({ id, nombre, base, sc }) {
     if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status} en ${u.pathname}: ${txt.slice(0, 120).replace(/\s+/g, ' ')}`);
     try { return JSON.parse(txt); } catch { throw new Error(`Respuesta no es JSON en ${u.pathname}: ${txt.slice(0, 80).replace(/\s+/g, ' ')}`); }
   };
-  const aOfertas = (lista) => {
+  // Toma el vendedor principal con stock (el que muestra la tienda) y guarda los campos de precio crudos en `detalle`.
+  const aOfertas = (lista, fuente, rid) => {
     const out = [];
     for (const p of lista || []) {
       const it = p.items?.[0];
-      const offer = it?.sellers?.find((s) => s.commertialOffer?.AvailableQuantity > 0)?.commertialOffer;
+      const conStock = (it?.sellers || []).filter((s) => s.commertialOffer?.AvailableQuantity > 0);
+      const vend = conStock.find((s) => s.sellerDefault) || conStock[0];
+      const offer = vend?.commertialOffer;
       if (!offer || !(offer.Price > 0)) continue;
-      out.push({ nombre: p.productName, precio: offer.Price, precioLista: offer.ListPrice, url: p.link, imagen: it.images?.[0]?.imageUrl });
+      out.push({
+        nombre: p.productName, precio: offer.Price, precioLista: offer.ListPrice, url: p.link, imagen: it.images?.[0]?.imageUrl,
+        detalle: { fuente, region: rid || null, vendedor: vend.sellerId, vendedorPrincipal: !!vend.sellerDefault, Price: offer.Price, ListPrice: offer.ListPrice,
+          PriceWithoutDiscount: offer.PriceWithoutDiscount, spotPrice: offer.spotPrice, multiplicador: it.unitMultiplier, medida: it.measurementUnit },
+      });
     }
     return out;
   };
@@ -45,13 +52,13 @@ function vtex({ id, nombre, base, sc }) {
     u.searchParams.set('query', q); u.searchParams.set('count', '10'); u.searchParams.set('page', '1');
     if (sc) u.searchParams.set('sc', sc);
     if (rid) u.searchParams.set('regionId', rid);
-    return aOfertas((await pedir(u)).products);
+    return aOfertas((await pedir(u)).products, 'inteligente', rid);
   };
   const clasica = async (q) => {
     const u = new URL('/api/catalog_system/pub/products/search', base);
     u.searchParams.set('ft', q); u.searchParams.set('_from', '0'); u.searchParams.set('_to', '9');
     if (sc) u.searchParams.set('sc', sc);
-    return aOfertas(await pedir(u));
+    return aOfertas(await pedir(u), 'clasica', null);
   };
   return {
     id, nombre, verificado: false,
