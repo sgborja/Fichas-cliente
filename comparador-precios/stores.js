@@ -4,25 +4,45 @@ const UA = 'Mozilla/5.0 (compatible; ComparadorPrecios/1.0)';
 
 // Plataforma VTEX (la usan Carrefour, Disco, Vea, Changomás...). Endpoint público de catálogo.
 function vtex({ id, nombre, base, sc }) {
+  const headers = {
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    accept: 'application/json, text/plain, */*', 'accept-language': 'es-AR,es;q=0.9',
+  };
+  const pedir = async (u) => {
+    const r = await fetch(u, { headers, signal: AbortSignal.timeout(12000) });
+    const txt = await r.text();
+    if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status} en ${u.pathname}: ${txt.slice(0, 120).replace(/\s+/g, ' ')}`);
+    try { return JSON.parse(txt); } catch { throw new Error(`Respuesta no es JSON en ${u.pathname}: ${txt.slice(0, 80).replace(/\s+/g, ' ')}`); }
+  };
+  const aOfertas = (lista) => {
+    const out = [];
+    for (const p of lista || []) {
+      const it = p.items?.[0];
+      const offer = it?.sellers?.find((s) => s.commertialOffer?.AvailableQuantity > 0)?.commertialOffer;
+      if (!offer || !(offer.Price > 0)) continue;
+      out.push({ nombre: p.productName, precio: offer.Price, precioLista: offer.ListPrice, url: p.link, imagen: it.images?.[0]?.imageUrl });
+    }
+    return out;
+  };
   return {
     id, nombre, verificado: false,
     async buscar(q) {
-      const u = new URL('/api/catalog_system/pub/products/search', base);
-      u.searchParams.set('ft', q);
-      u.searchParams.set('_from', '0');
-      u.searchParams.set('_to', '14');
-      if (sc) u.searchParams.set('sc', sc); // canal de venta / sucursal (ver README)
-      const r = await fetch(u, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
-      if (!r.ok && r.status !== 206) throw new Error(`${nombre}: HTTP ${r.status}`);
-      const data = await r.json();
-      const out = [];
-      for (const p of data) {
-        const it = p.items?.[0];
-        const offer = it?.sellers?.find((s) => s.commertialOffer?.AvailableQuantity > 0)?.commertialOffer;
-        if (!offer || !(offer.Price > 0)) continue;
-        out.push({ nombre: p.productName, precio: offer.Price, precioLista: offer.ListPrice, url: p.link, imagen: it.images?.[0]?.imageUrl });
-      }
-      return out;
+      const errores = [];
+      // 1) API clásica de catálogo
+      try {
+        const u = new URL('/api/catalog_system/pub/products/search', base);
+        u.searchParams.set('ft', q); u.searchParams.set('_from', '0'); u.searchParams.set('_to', '9');
+        if (sc) u.searchParams.set('sc', sc);
+        return aOfertas(await pedir(u));
+      } catch (e) { errores.push(e.message); }
+      // 2) Búsqueda inteligente (la usan los sitios VTEX más nuevos)
+      try {
+        const u = new URL('/api/io/_v/api/intelligent-search/product_search', base);
+        u.searchParams.set('query', q); u.searchParams.set('count', '10'); u.searchParams.set('page', '1');
+        if (sc) u.searchParams.set('sc', sc);
+        return aOfertas((await pedir(u)).products);
+      } catch (e) { errores.push(e.message); }
+      throw new Error(`${nombre}: ${errores.join(' | ')}`);
     },
   };
 }
