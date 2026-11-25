@@ -7,6 +7,7 @@ function vtex({ id, nombre, base, sc }) {
   const headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
     accept: 'application/json, text/plain, */*', 'accept-language': 'es-AR,es;q=0.9',
+    ...(process.env['COOKIES_' + id.toUpperCase()] ? { cookie: process.env['COOKIES_' + id.toUpperCase()] } : {}),
   };
   const pedir = async (u) => {
     let r;
@@ -34,18 +35,23 @@ function vtex({ id, nombre, base, sc }) {
     return out;
   };
   // Zona/sucursal: VTEX traduce un código postal a una "región" (grupo de vendedores de esa zona).
+  // Se puede fijar la zona a mano con la variable REGION_<SUPER> (ej. REGION_DISCO), sin consultar el código postal.
   const regiones = new Map();
   const region = async (cp) => {
-    if (!cp) return null;
+    const fija = process.env['REGION_' + id.toUpperCase()];
+    if (fija) return { rid: fija, nota: 'zona fijada por variable de entorno' };
+    if (!cp) return { rid: null, nota: 'sin código postal' };
     if (regiones.has(cp)) return regiones.get(cp);
-    let rid = null;
+    let r;
     try {
       const u = new URL('/api/checkout/pub/regions', base);
       u.searchParams.set('country', 'ARG'); u.searchParams.set('postalCode', cp);
-      rid = (await pedir(u))?.[0]?.id || null;
-    } catch { /* sin región: se usan precios generales */ }
-    regiones.set(cp, rid);
-    return rid;
+      const j = await pedir(u);
+      const rid = j?.[0]?.id || null;
+      r = { rid, nota: rid ? '' : `el sitio no reconoce el código postal ${cp} (respuesta: ${JSON.stringify(j).slice(0, 80)})` };
+    } catch (e) { r = { rid: null, nota: e.message.slice(0, 160) }; }
+    regiones.set(cp, r);
+    return r;
   };
   const inteligente = async (q, rid) => {
     const u = new URL('/api/io/_v/api/intelligent-search/product_search', base);
@@ -63,17 +69,18 @@ function vtex({ id, nombre, base, sc }) {
   return {
     id, nombre, verificado: false,
     async buscar(q, { cp } = {}) {
-      const rid = await region(cp);
+      const { rid, nota } = await region(cp);
       // La búsqueda inteligente acepta zona; la clásica no. Con código postal se prueba primero la inteligente.
-      const orden = cp ? [['inteligente', () => inteligente(q, rid)], ['clasica', () => clasica(q)]]
+      const orden = (cp || rid) ? [['inteligente', () => inteligente(q, rid)], ['clasica', () => clasica(q)]]
                        : [['clasica', () => clasica(q)], ['inteligente', () => inteligente(q, null)]];
       const errores = [];
       for (const [n, f] of orden) {
         try {
           let out = await f(), usoRegion = n === 'inteligente' ? rid : null;
           // Si con zona no hay resultados, se reintenta con precios generales (mejor eso que nada).
-          if (!out.length && n === 'inteligente' && rid) { out = await inteligente(q, null); usoRegion = null; }
-          out.regionId = usoRegion; return out;
+          let notaFinal = nota;
+          if (!out.length && n === 'inteligente' && rid) { out = await inteligente(q, null); usoRegion = null; notaFinal = 'con esa zona el sitio no devolvió resultados; se usó el precio general'; }
+          out.regionId = usoRegion; out.regionNota = usoRegion ? '' : notaFinal; return out;
         }
         catch (e) { errores.push(e.message); }
       }

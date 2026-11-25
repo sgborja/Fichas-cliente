@@ -49,6 +49,12 @@ Vercel no mantiene un servidor encendido: corre las funciones de `api/` en cada 
 
 **Advertencia:** algunos supermercados bloquean o limitan consultas que vienen de servidores en la nube (a veces solo aceptan IPs de Argentina). No se puede saber hasta probarlo. Si falla online pero anda en tu computadora, la alternativa es dejar el servidor en una PC de tu casa, o elegir un proveedor con servidores en Argentina/Sudamérica.
 
+## Fijar la zona de un súper a mano (variables de entorno)
+Si un súper no reconoce el código postal (el aviso debajo del análisis lo indica), se puede fijar su zona con estas variables, usando el id del súper en mayúsculas (`CARREFOUR`, `DISCO`, `VEA`, `CHANGOMAS`):
+- `REGION_<SUPER>`: el identificador de región que usa el sitio (el valor `regionId` que aparece en las consultas de búsqueda del navegador al elegir tu sucursal), por ejemplo `REGION_DISCO`.
+- `COOKIES_<SUPER>`: cookies extra para ese súper (por ejemplo `vtex_segment=...`). No pegues cookies de sesión ni de cuenta.
+La pantalla de detalle (**ⓘ detalle**) de cada celda muestra qué zona se usó y por qué.
+
 ## Estado de los súper (importante)
 Carrefour, Disco, Vea y Chango Más (`masonline.com.ar`) usan la API pública de catálogo de VTEX (`/api/catalog_system/pub/products/search`) **según lo que se sabe de esas plataformas, pero NO se pudo probar contra los sitios reales** (el entorno de desarrollo no tenía salida a internet). Makro y Tadicor se descartaron (solo catálogo/revista) y Supermami está en pausa (sitio en reforma). La Anónima se lee directo del HTML de su búsqueda (`laAnonima` en `stores.js`, etiquetas `data-nombre` / `data-precio`); probado solo con un ejemplo real pegado, no en vivo. Su zona se define con cookies: el programa manda `codigoPostal` (el campo de la pantalla). Para fijar también la zona de precios y la sucursal, definí la variable `LAANONIMA_COOKIES` antes de arrancar (valores que ves en las cookies de tu navegador para laanonima.com.ar: `idZonaPrecio` y `Id-Sucursal-Super`), por ejemplo en Windows: `set LAANONIMA_COOKIES=idZonaPrecio=8; Id-Sucursal-Super=177` y después `node server.js`. No guardes cookies personales ni de sesión en el repositorio.
 

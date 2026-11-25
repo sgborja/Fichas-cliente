@@ -17,7 +17,7 @@ async function precio(store, q, cp) {
   if (hit && Date.now() - hit.t < TTL) return structuredClone(hit.v);
   try {
     const c = await limitar(() => store.buscar(q, { cp }));
-    const v = { match: elegir(q, c), opciones: rankear(q, c), region: c.regionId };
+    const v = { match: elegir(q, c), opciones: rankear(q, c), region: c.regionId, regionNota: c.regionNota };
     if (!v.match) v.sinMatch = { cantidad: c.length, mejor: c[0]?.nombre || null, diag: c.diag };
     cache.set(k, { t: Date.now(), v: structuredClone(v) });
     return v;

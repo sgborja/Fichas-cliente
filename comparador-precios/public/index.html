@@ -173,7 +173,7 @@ function mostrarAnalisis(){
   const st=tiendas.filter(t=>sel.has(t.id)).map(t=>t.id); if(!st.length){el.hidden=true;return}
   const rows=res.map(r=>({nombre:r.nombre,qty:r.qty,precios:Object.fromEntries(st.map(s=>[s,r.tiendas[s]?.match?(r.tiendas[s].match.precioComparable??r.tiendas[s].match.precio):null]))}));
   const costo=+$('#costo').value, a=Analisis.analizar(rows,{stores:st,costoViaje:costo,tolerancia:+$('#tol').value});
-  const sinZona=st.filter(s=>res.every(r=>r.tiendas[s]&&'region' in r.tiendas[s]&&r.tiendas[s].region===null&&!r.tiendas[s].error)).map(nom);
+  const sinZona=st.filter(s=>res.every(r=>r.tiendas[s]&&'region' in r.tiendas[s]&&r.tiendas[s].region===null&&!r.tiendas[s].error)).map(s=>{const n=res.map(r=>r.tiendas[s].regionNota).find(Boolean); return nom(s)+(n?' ('+n+')':'')});
   const e=a.elegido; el.hidden=false;
   const porSuper={}; e.asign.forEach((x,i)=>{if(x)(porSuper[x.store]=porSuper[x.store]||[]).push({n:rows[i].nombre,q:rows[i].qty,p:x.precio})});
   ultimoPlan={a,porSuper,costo};
