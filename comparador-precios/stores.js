@@ -98,7 +98,9 @@ function laAnonima({ id, nombre, urlBusqueda }) {
         if (!r.ok) throw new Error(`${nombre}: HTTP ${r.status} en ${u.pathname}`);
         const html = await r.text();
         const out = [];
-        for (const [tag] of html.matchAll(/<a\b[^>]*data-tipo\s*=\s*"portadaProduct"[^>]*>/gi)) {
+        // Etiqueta <a ...> respetando comillas: algunos valores (data-rutacategorias="Almacén > Arroz") contienen ">".
+        for (const [tag] of html.matchAll(/<a\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
+          if (!/data-tipo\s*=\s*"portadaProduct"/.test(tag)) continue;
           const n = attr(tag, 'data-nombre');
           const precios = [attr(tag, 'data-precio'), attr(tag, 'data-precio_oferta')].map(parseFloat).filter((x) => x > 0);
           if (!n || !precios.length) continue;
