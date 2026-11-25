@@ -70,37 +70,37 @@ function vtex({ id, nombre, base, sc }) {
   };
 }
 
-// Sitios que publican los productos en la propia página (datos estándar schema.org en <script type="application/ld+json">).
-// urlBusqueda lleva {q} donde va el texto buscado.
-function jsonld({ id, nombre, urlBusqueda }) {
-  const headers = {
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-    accept: 'text/html,application/xhtml+xml', 'accept-language': 'es-AR,es;q=0.9',
-  };
+// La Anónima: la página de búsqueda trae cada producto en una etiqueta <a data-tipo="portadaProduct" data-nombre="..." data-precio="...">.
+// La zona/sucursal de precios la define con cookies: se manda codigoPostal (el del campo de la pantalla) y,
+// opcionalmente, las cookies de zona que fijes en la variable de entorno LAANONIMA_COOKIES (ver README).
+function laAnonima({ id, nombre, urlBusqueda }) {
+  const attr = (tag, k) => { const m = tag.match(new RegExp(`${k}\\s*=\\s*"([^"]*)"`)); return m ? m[1] : null; };
+  const decodificar = (t) => t.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   return {
     id, nombre, verificado: false,
-    async buscar(q) {
+    async buscar(q, { cp } = {}) {
       const u = new URL(urlBusqueda.replace('{q}', encodeURIComponent(q)));
+      const cookies = [cp ? `codigoPostal=${cp}; seleccionocp=1` : '', process.env.LAANONIMA_COOKIES || ''].filter(Boolean).join('; ');
+      const headers = {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        accept: 'text/html,application/xhtml+xml', 'accept-language': 'es-AR,es;q=0.9',
+        ...(cookies ? { cookie: cookies } : {}),
+      };
       let r;
       try { r = await fetch(u, { headers, signal: AbortSignal.timeout(15000) }); }
       catch (e) { throw new Error(`${nombre}: no se pudo conectar a ${u.host} (${e.cause?.code || e.message})`); }
       if (!r.ok) throw new Error(`${nombre}: HTTP ${r.status} en ${u.pathname}`);
       const html = await r.text();
       const out = [];
-      const re = /<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi;
-      let m;
-      while ((m = re.exec(html))) {
-        let j; try { j = JSON.parse(m[1]); } catch { continue; }
-        for (const el of [].concat(j.itemListElement || [])) {
-          const it = el.item || el;
-          const o = [].concat(it.offers || [])[0];
-          if (!it.name || !o || !(+o.price > 0)) continue;
-          if (o.availability && !/InStock/i.test(o.availability)) continue;
-          out.push({ nombre: it.name, precio: +o.price, url: it.url, imagen: it.image });
-        }
+      for (const [tag] of html.matchAll(/<a\b[^>]*data-tipo\s*=\s*"portadaProduct"[^>]*>/gi)) {
+        const n = attr(tag, 'data-nombre');
+        const precios = [attr(tag, 'data-precio'), attr(tag, 'data-precio_oferta')].map(parseFloat).filter((x) => x > 0);
+        if (!n || !precios.length) continue;
+        const href = attr(tag, 'href');
+        out.push({ nombre: decodificar(n), precio: Math.min(...precios), precioLista: parseFloat(attr(tag, 'data-precio_anterior')) || undefined, url: href ? new URL(href, u).href : undefined });
       }
-      if (!out.length && !/application\/ld\+json/i.test(html)) throw new Error(`${nombre}: la página no trae datos de productos (revisar urlBusqueda)`);
-      return out;
+      if (!out.length && !/productos-container/.test(html)) throw new Error(`${nombre}: la página no tiene el listado de productos (¿cambió el sitio o bloquea consultas?)`);
+      return out; // vacío = el sitio respondió pero no hay productos para esa búsqueda
     },
   };
 }
@@ -116,7 +116,7 @@ const REAL = [
   vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar' }),
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
-  jsonld({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
+  laAnonima({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
 ];
 
 // Modo prueba: precios simulados y repetibles
