@@ -70,7 +70,7 @@ function render(){
     const cells=st.map(t=>{
       if(!r) return '<td></td>'; const x=r.tiendas[t.id]; const ed=`data-i="${i}" data-t="${t.id}"`;
       if(x?.error) return `<td class="cell" ${ed}><span class="err"><b>error</b></span><span class="sub err" style="max-width:220px">${x.error.replace(/</g,'&lt;').slice(0,260)}</span></td>`;
-      if(!x?.match) {const sm=x?.sinMatch; return `<td class="mut cell" ${ed}>no encontrado<span class="sub">${sm?(sm.cantidad?`el súper devolvió ${sm.cantidad} resultado(s) pero ninguno coincide. Primero: ${String(sm.mejor||'').replace(/</g,'&lt;')}`:'el súper no devolvió resultados para esta búsqueda'):''}</span></td>`}
+      if(!x?.match) {const sm=x?.sinMatch; return `<td class="mut cell" ${ed}>no encontrado<span class="sub">${sm?(sm.cantidad?`el súper devolvió ${sm.cantidad} resultado(s) pero ninguno coincide. Primero: ${String(sm.mejor||'').replace(/</g,'&lt;')}`:'el súper no devolvió resultados para esta búsqueda'+(sm.diag?' ['+String(sm.diag).replace(/</g,'&lt;')+']':'')):''}</span></td>`}
       const m=x.match, pc=m.precioComparable??m.precio, pu=m.porUnidad?` · ${money(m.porUnidad.precio)}/${m.porUnidad.unidad==='l'?'litro':'kg'}`:'';
       const eq=m.ajustado?`<span class="eq">equivale a ${money(pc)} por el tamaño pedido (real ${money(m.precio)})</span>`:'';
       return `<td class="cell" ${ed}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${eq}<span class="sub">${m.nombre}${pu}</span></td>`;

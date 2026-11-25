@@ -84,28 +84,40 @@ function laAnonima({ id, nombre, urlBusqueda }) {
   return {
     id, nombre, verificado: false,
     async buscar(q, { cp } = {}) {
-      const u = new URL(urlBusqueda.replace('{q}', encodeURIComponent(q)));
       const cookies = [cp ? `codigoPostal=${cp}; seleccionocp=1` : '', process.env.LAANONIMA_COOKIES || ''].filter(Boolean).join('; ');
       const headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
         accept: 'text/html,application/xhtml+xml', 'accept-language': 'es-AR,es;q=0.9',
         ...(cookies ? { cookie: cookies } : {}),
       };
-      let r;
-      try { r = await fetch(u, { headers, signal: AbortSignal.timeout(15000) }); }
-      catch (e) { throw new Error(`${nombre}: no se pudo conectar a ${u.host} (${e.cause?.code || e.message})`); }
-      if (!r.ok) throw new Error(`${nombre}: HTTP ${r.status} en ${u.pathname}`);
-      const html = await r.text();
-      const out = [];
-      for (const [tag] of html.matchAll(/<a\b[^>]*data-tipo\s*=\s*"portadaProduct"[^>]*>/gi)) {
-        const n = attr(tag, 'data-nombre');
-        const precios = [attr(tag, 'data-precio'), attr(tag, 'data-precio_oferta')].map(parseFloat).filter((x) => x > 0);
-        if (!n || !precios.length) continue;
-        const href = attr(tag, 'href');
-        out.push({ nombre: decodificar(n), precio: Math.min(...precios), precioLista: parseFloat(attr(tag, 'data-precio_anterior')) || undefined, url: href ? new URL(href, u).href : undefined });
+      const pagina = async (texto) => {
+        const u = new URL(urlBusqueda.replace('{q}', encodeURIComponent(texto)));
+        let r;
+        try { r = await fetch(u, { headers, signal: AbortSignal.timeout(15000) }); }
+        catch (e) { throw new Error(`${nombre}: no se pudo conectar a ${u.host} (${e.cause?.code || e.message})`); }
+        if (!r.ok) throw new Error(`${nombre}: HTTP ${r.status} en ${u.pathname}`);
+        const html = await r.text();
+        const out = [];
+        for (const [tag] of html.matchAll(/<a\b[^>]*data-tipo\s*=\s*"portadaProduct"[^>]*>/gi)) {
+          const n = attr(tag, 'data-nombre');
+          const precios = [attr(tag, 'data-precio'), attr(tag, 'data-precio_oferta')].map(parseFloat).filter((x) => x > 0);
+          if (!n || !precios.length) continue;
+          const href = attr(tag, 'href');
+          out.push({ nombre: decodificar(n), precio: Math.min(...precios), precioLista: parseFloat(attr(tag, 'data-precio_anterior')) || undefined, url: href ? new URL(href, u).href : undefined });
+        }
+        const total = html.match(/data-total-productos\s*=\s*"(\d+)"/)?.[1];
+        return { out, html, diag: `${u.pathname} · ${html.length} caracteres · total declarado: ${total ?? 'n/d'}` };
+      };
+      // Si la búsqueda completa no devuelve nada, se prueba con menos palabras (el sitio puede no aceptar frases largas).
+      const palabras = q.trim().split(/\s+/);
+      let ultimo;
+      for (let n = palabras.length; n >= 1; n--) {
+        ultimo = await pagina(palabras.slice(0, n).join(' '));
+        if (ultimo.out.length) return ultimo.out;
+        if (n === palabras.length && !/productos-container/.test(ultimo.html))
+          throw new Error(`${nombre}: la página no tiene el listado de productos (¿cambió el sitio o bloquea consultas?)`);
       }
-      if (!out.length && !/productos-container/.test(html)) throw new Error(`${nombre}: la página no tiene el listado de productos (¿cambió el sitio o bloquea consultas?)`);
-      return out; // vacío = el sitio respondió pero no hay productos para esa búsqueda
+      const vacio = []; vacio.diag = ultimo.diag; return vacio; // el sitio respondió pero sin productos
     },
   };
 }
