@@ -95,7 +95,7 @@ const REAL = [
   vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar' }),
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
-  jsonld({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar?clave={q}' }),
+  jsonld({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
   pendiente('supermami', 'Supermami'),
 ];
 
