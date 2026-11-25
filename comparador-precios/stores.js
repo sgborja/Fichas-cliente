@@ -60,7 +60,6 @@ const REAL = [
   vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar' }),
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
-  pendiente('makro', 'Makro'),
   pendiente('laanonima', 'La Anónima'),
   pendiente('tadicor', 'Tadicor'),
 ];

@@ -16,7 +16,7 @@ Abrir http://localhost:3000. Sin dependencias (Node 18+).
 - **Recomendación**: prueba todas las combinaciones de súper; cada ítem se compra en el más barato dentro de la combinación y se suma el *costo por súper adicional*. Si un plan con menos paradas queda dentro de la tolerancia %, se prefiere. Avisa cuando un súper aporta menos ahorro que lo que cuesta ir.
 
 ## Estado de los súper (importante)
-Carrefour, Disco, Vea y Chango Más usan la API pública de catálogo de VTEX (`/api/catalog_system/pub/products/search`) **según lo que se sabe de esas plataformas, pero NO se pudo probar contra los sitios reales** (el entorno de desarrollo no tenía salida a internet). Makro, La Anónima y Tadicor están marcados "sin configurar": hay que mirar en el navegador (pestaña Red/Network) cómo consulta cada web y escribir su adaptador en `stores.js`.
+Carrefour, Disco, Vea y Chango Más usan la API pública de catálogo de VTEX (`/api/catalog_system/pub/products/search`) **según lo que se sabe de esas plataformas, pero NO se pudo probar contra los sitios reales** (el entorno de desarrollo no tenía salida a internet). La Anónima y Tadicor están marcados "sin configurar": hay que mirar en el navegador (pestaña Red/Network) cómo consulta cada web y escribir su adaptador en `stores.js`.
 
 Los precios y el stock pueden variar por sucursal de Córdoba; en VTEX se ajusta con el parámetro `sc` (canal de venta) en `stores.js`. Además, algunos sitios limitan consultas automáticas: revisar sus términos y mantener el caché (30 min) y volúmenes bajos.
 
