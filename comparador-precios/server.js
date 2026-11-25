@@ -11,7 +11,7 @@ async function precio(store, q, cp) {
   const hit = cache.get(k);
   if (hit && Date.now() - hit.t < TTL) return hit.v;
   let v;
-  try { const c = await store.buscar(q, { cp }); v = { match: elegir(q, c), region: c.regionId }; }
+  try { const c = await store.buscar(q, { cp }); v = { match: elegir(q, c), region: c.regionId }; if (!v.match) v.sinMatch = { cantidad: c.length, mejor: c[0]?.nombre || null }; }
   catch (e) { v = { error: e.message }; }
   if (!v.error) cache.set(k, { t: Date.now(), v });
   return v;

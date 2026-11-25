@@ -62,7 +62,12 @@ function vtex({ id, nombre, base, sc }) {
                        : [['clasica', () => clasica(q)], ['inteligente', () => inteligente(q, null)]];
       const errores = [];
       for (const [n, f] of orden) {
-        try { const out = await f(); out.regionId = n === 'inteligente' ? rid : null; return out; }
+        try {
+          let out = await f(), usoRegion = n === 'inteligente' ? rid : null;
+          // Si con zona no hay resultados, se reintenta con precios generales (mejor eso que nada).
+          if (!out.length && n === 'inteligente' && rid) { out = await inteligente(q, null); usoRegion = null; }
+          out.regionId = usoRegion; return out;
+        }
         catch (e) { errores.push(e.message); }
       }
       throw new Error(`${nombre}: ${errores.join(' | ')}`);
