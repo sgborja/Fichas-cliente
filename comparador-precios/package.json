@@ -1,0 +1,8 @@
+{
+  "name": "comparador-precios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Comparador de precios de supermercados de Córdoba",
+  "engines": { "node": "22.x" },
+  "scripts": { "start": "node server.js", "test": "node test.js" }
+}
