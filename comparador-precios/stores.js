@@ -61,7 +61,7 @@ const REAL = [
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
   pendiente('laanonima', 'La Anónima'),
-  pendiente('tadicor', 'Tadicor'),
+  pendiente('supermami', 'Supermami'),
 ];
 
 // Modo prueba: precios simulados y repetibles
