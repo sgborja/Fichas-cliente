@@ -24,10 +24,24 @@ Abrir http://localhost:3000. Sin dependencias (Node 18+).
 - **Otras opciones:** en cada celda, "otras opciones" muestra los resultados que trajo ese súper (otras marcas/tamaños) para elegir cuál usar; el análisis se recalcula.
 - **Listas:** varias listas con nombre (semanal, mensual...) que se guardan en el navegador junto con los últimos precios consultados.
 - **Exportar:** "Exportar a Excel (CSV)" baja la comparación y la recomendación; "Imprimir" imprime la tabla.
-- **Historial de precios:** el servidor guarda el precio de cada producto por día (`data/historial.json`, o `DATA_DIR`). Si cambió desde un día anterior aparece ▲/▼ con el porcentaje (clic para ver el detalle) y la etiqueta *oferta* cuando el súper informa precio anterior mayor.
+- **Historial de precios:** el servidor guarda el precio de cada producto por día (`data/historial.json`, o `DATA_DIR`; en Vercel, con Upstash Redis). Si cambió desde un día anterior aparece ▲/▼ con el porcentaje (clic para ver el detalle) y la etiqueta *oferta* cuando el súper informa precio anterior mayor.
 - **Límites:** hasta 60 productos por búsqueda y 6 consultas simultáneas a los súper, para no sobrecargarlos.
 
-## Publicarla en internet
+## Publicarla en Vercel (con tu propio dominio)
+Vercel no mantiene un servidor encendido: corre las funciones de `api/` en cada consulta (`vercel.json` las deja en São Paulo, hasta 60 s). La pantalla busca de a un producto por pedido para que cada consulta sea corta.
+1. En Vercel: **Add New → Project**, importá el repositorio y creá un proyecto **nuevo** (no toques el del sitio principal).
+2. **Root Directory:** `comparador-precios`. **Framework Preset:** *Other*. Sin comando de build.
+3. **Rama:** el código está en `claude/dreamy-meitner-op361f`. Para publicarla como producción, en *Settings → Git → Production Branch* elegí esa rama (o fusioná a `main`).
+4. **Environment Variables:**
+   - `APP_PASSWORD`: la contraseña de acceso (el navegador la pide al entrar y la recuerda).
+   - `LAANONIMA_COOKIES` (opcional): `idZonaPrecio=8; Id-Sucursal-Super=177`.
+5. **Deploy.** Probá primero con la dirección `*.vercel.app` que te da Vercel.
+6. **Dominio:** *Settings → Domains → Add* `precios.tudominio.com.ar`. Si el dominio ya está en tu cuenta de Vercel se configura solo; si no, Vercel te indica el registro DNS (un `CNAME`) para crear donde administrás los DNS.
+7. **Historial de precios (opcional):** en Vercel no hay disco, así que el historial queda desactivado. Para activarlo, en la pestaña *Storage* del proyecto agregá una base **Upstash Redis** (plan gratis): Vercel carga solas las variables y el programa la usa. Para el volumen de uso personal alcanza de sobra.
+
+**Advertencia:** los súper pueden bloquear consultas de servidores fuera de Argentina; no hay forma de saberlo sin probar. Si desde Vercel dan "error" y desde tu computadora no, conviene correr el programa en una PC de tu casa con un túnel (por ejemplo Cloudflare Tunnel) o en un hosting argentino.
+
+## Publicarla en otros servicios (Render, Docker)
 1. Subí el repositorio a GitHub (ya está) y creá una cuenta en [Render](https://render.com).
 2. *New → Blueprint*, elegí el repositorio y la rama; usa `comparador-precios/render.yaml` (o un *Web Service* con Docker y *Root Directory* `comparador-precios`).
 3. Definí la variable **`APP_PASSWORD`**: sin contraseña, cualquiera con la dirección podría usar tu servidor para consultar los súper. Al entrar, el navegador pide usuario (cualquiera) y esa contraseña.

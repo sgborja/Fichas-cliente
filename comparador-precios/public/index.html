@@ -51,6 +51,13 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 const $=s=>document.querySelector(s);
 const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const money=n=>'$'+Math.round(n).toLocaleString('es-AR');
+/* ---------- Llamadas al servidor (con contraseña si hace falta) ---------- */
+let clave=''; try{ clave=localStorage.getItem('clave')||'' }catch{}
+async function api(ruta,opts={},reintento=true){
+  const r=await fetch(ruta,{...opts,headers:{...(opts.headers||{}),...(clave?{'x-clave':clave}:{}),...(opts.body?{'content-type':'application/json'}:{})}});
+  if(r.status===401&&reintento){ const c=prompt('Este comparador tiene contraseña. Escribila:'); if(c===null) return r; clave=c; try{localStorage.setItem('clave',c)}catch{} return api(ruta,opts,false) }
+  return r;
+}
 const DEMO={mock:true,historial:false,tiendas:['Carrefour','Disco','Vea','Chango Más','La Anónima'].map(n=>({id:n.toLowerCase().replace(/[^a-z]/g,''),nombre:n,pendiente:false}))};
 const hash=x=>{let h=7;for(const c of x)h=(h*31+c.charCodeAt(0))>>>0;return h};
 function buscarDemo(items,stores){return items.map(it=>({nombre:it.nombre,qty:it.qty||1,tiendas:Object.fromEntries(stores.map(id=>{
@@ -78,7 +85,7 @@ $('#dup').onclick=()=>{const n=(prompt('Nombre de la copia:',actual+' (copia)')|
 $('#borrar').onclick=()=>{ if(Object.keys(listas).length<2) return alert('Tiene que quedar al menos una lista.'); if(!confirm('¿Borrar la lista "'+actual+'"?')) return; delete listas[actual]; cambiarLista(Object.keys(listas)[0]) };
 
 async function init(){
-  let d; try{ const r=await fetch('/api/tiendas'); if(!r.ok) throw 0; d=await r.json() }catch{ d=DEMO }
+  let d; try{ const r=await api('/api/tiendas'); if(r.status===401){ alert('Contraseña incorrecta. Recargá la página para intentar de nuevo.'); throw 0 } if(!r.ok) throw 0; d=await r.json() }catch{ d=DEMO }
   tiendas=d.tiendas; demo=d===DEMO;
   if(!sel.size) tiendas.filter(t=>!t.pendiente).forEach(t=>sel.add(t.id));
   $('#modo').textContent=demo?'MODO SIN SERVIDOR: precios simulados. Para precios reales, iniciá el servidor (ver README).':d.mock?'MODO PRUEBA: precios simulados.':'Precios consultados en las tiendas online.';
@@ -117,7 +124,7 @@ $('#t').addEventListener('click',async e=>{
   if(d.del!=null){filas().splice(+d.del,1);L().res=null;save();render();mostrarAnalisis();return}
   if(d.op){const i=+d.i; abierta=abierta&&abierta.i===i&&abierta.t===d.t?null:{i,t:d.t}; render();return}
   if(d.pick!=null){const x=L().res[+d.i].tiendas[d.t]; x.match=x.opciones[+d.pick]; abierta=null; save(); render(); mostrarAnalisis(); return}
-  if(d.hk){ try{ const h=await (await fetch('/api/historial?k='+encodeURIComponent(d.hk))).json(); alert('Historial de precios:\n'+h.slice(-15).map(([f,p])=>f+'  '+money(p)).join('\n')) }catch{} }
+  if(d.hk){ try{ const h=await (await api('/api/historial?k='+encodeURIComponent(d.hk))).json(); alert('Historial de precios:\n'+h.slice(-15).map(([f,p])=>f+'  '+money(p)).join('\n')) }catch{} }
 });
 $('#t').addEventListener('dblclick',e=>{const td=e.target.closest('td.cell'); const res=L().res; if(!td||!res||e.target.closest('.ops')) return;
   const i=+td.dataset.i, id=td.dataset.t, prev=res[i].tiendas[id]?.match?.precio||'';
@@ -135,12 +142,26 @@ $('#imp').onclick=()=>window.print();
 
 $('#go').onclick=async()=>{
   const items=filas().filter(f=>f.nombre.trim()); if(!items.length) return;
-  $('#go').disabled=true;$('#go').textContent='Buscando…';
-  try{let data;
+  const btn=$('#go'); btn.disabled=true; btn.textContent='Buscando…';
+  try{
+    let data;
     if(demo) data=buscarDemo(items,[...sel]);
-    else{const r=await fetch('/api/buscar',{method:'POST',body:JSON.stringify({items,stores:[...sel],cp:$('#cp').value.trim()})}); data=await r.json(); if(!r.ok) throw new Error(data.error||'Error del servidor')}
+    else{
+      // Un pedido por producto (cada uno es corto, ideal para Vercel), de a 3 en paralelo.
+      data=new Array(items.length); let sig=0, hechos=0, fatal=null;
+      const cp=$('#cp').value.trim(), stores=[...sel];
+      const trabajador=async()=>{ while(sig<items.length&&!fatal){ const i=sig++;
+        try{ const r=await api('/api/buscar',{method:'POST',body:JSON.stringify({items:[items[i]],stores,cp})}); const j=await r.json();
+          if(r.status===401){ fatal=new Error('Contraseña incorrecta'); return }
+          if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); data[i]=j[0];
+        }catch(e){ data[i]={nombre:items[i].nombre,qty:items[i].qty||1,tiendas:Object.fromEntries(stores.map(id=>[id,{error:'No se pudo consultar: '+e.message}]))} }
+        btn.textContent='Buscando '+(++hechos)+'/'+items.length+'…'; } };
+      await Promise.all([trabajador(),trabajador(),trabajador()]);
+      if(fatal) throw fatal;
+    }
     L().filas=items; L().res=data; L().ts=Date.now(); abierta=null; save(); render(); mostrarAnalisis();
-  }catch(e){alert('Error: '+e.message)} $('#go').disabled=false;$('#go').textContent='Buscar precios';
+  }catch(e){alert('Error: '+e.message)}
+  btn.disabled=false; btn.textContent='Buscar precios';
 };
 
 /* ---------- Análisis ---------- */
