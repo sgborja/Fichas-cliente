@@ -9,7 +9,9 @@ function vtex({ id, nombre, base, sc }) {
     accept: 'application/json, text/plain, */*', 'accept-language': 'es-AR,es;q=0.9',
   };
   const pedir = async (u) => {
-    const r = await fetch(u, { headers, signal: AbortSignal.timeout(12000) });
+    let r;
+    try { r = await fetch(u, { headers, signal: AbortSignal.timeout(12000) }); }
+    catch (e) { throw new Error(`no se pudo conectar a ${u.host} (${e.cause?.code || e.message})`); }
     const txt = await r.text();
     if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status} en ${u.pathname}: ${txt.slice(0, 120).replace(/\s+/g, ' ')}`);
     try { return JSON.parse(txt); } catch { throw new Error(`Respuesta no es JSON en ${u.pathname}: ${txt.slice(0, 80).replace(/\s+/g, ' ')}`); }
@@ -57,7 +59,7 @@ const REAL = [
   vtex({ id: 'carrefour', nombre: 'Carrefour', base: 'https://www.carrefour.com.ar' }),
   vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar' }),
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
-  vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.changomas.com.ar' }),
+  vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
   pendiente('makro', 'Makro'),
   pendiente('laanonima', 'La Anónima'),
   pendiente('tadicor', 'Tadicor'),
