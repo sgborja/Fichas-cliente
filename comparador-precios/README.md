@@ -22,6 +22,8 @@ Abrir http://localhost:3000. Sin dependencias (Node 18+).
 
 ## Funciones
 - **Otras opciones:** en cada celda, "otras opciones" muestra los resultados que trajo ese súper (otras marcas/tamaños) para elegir cuál usar; el análisis se recalcula.
+- **Busca solo lo nuevo:** la app recuerda el resultado de cada producto y de cada súper (por zona). El botón dice **Buscar precios** la primera vez y después **Buscar lo nuevo (N)**: solo consulta productos nuevos o cuyo nombre cambió, súper recién tildados y consultas que dieron error. Cambiar la cantidad no consulta nada. **↻ Actualizar todo** vuelve a consultar todo (pisa los precios cargados a mano).
+- **Editar un producto:** clic sobre su nombre en la planilla (Enter = buscar lo nuevo). En cada celda, clic en el nombre del producto encontrado (o en "cambiar producto") para elegir otra opción o **buscar otro texto solo en ese súper**.
 - **Listas:** varias listas con nombre (semanal, mensual...) que se guardan en el navegador junto con los últimos precios consultados.
 - **Exportar:** "Exportar a Excel (CSV)" baja la comparación y la recomendación; "Imprimir" imprime la tabla.
 - **Historial de precios:** el servidor guarda el precio de cada producto por día (`data/historial.json`, o `DATA_DIR`; en Vercel, con Upstash Redis). Si cambió desde un día anterior aparece ▲/▼ con el porcentaje (clic para ver el detalle) y la etiqueta *oferta* cuando el súper informa precio anterior mayor.
