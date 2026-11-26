@@ -92,20 +92,67 @@ function vtex({ id, nombre, base, sc: scBase }) {
   };
 }
 
-// La Anónima: la página de búsqueda trae cada producto en una etiqueta <a data-tipo="portadaProduct" data-nombre="..." data-precio="...">.
-// La zona/sucursal de precios la define con cookies: se manda codigoPostal (el del campo de la pantalla) y,
-// opcionalmente, las cookies de zona que fijes en la variable de entorno LAANONIMA_COOKIES (ver README).
-function laAnonima({ id, nombre, urlBusqueda }) {
-  const attr = (tag, k) => { const m = tag.match(new RegExp(`${k}\\s*=\\s*"([^"]*)"`)); return m ? m[1] : null; };
-  const decodificar = (t) => t.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+// ---- Tiendas cuyo listado viene escrito en el HTML de la página de búsqueda ----
+const attr = (tag, k) => { const m = tag.match(new RegExp(`${k}\\s*=\\s*"([^"]*)"`)); return m ? m[1] : null; };
+const ENTIDADES = { amp: '&', quot: '"', lt: '<', gt: '>', nbsp: ' ', ntilde: 'ñ', Ntilde: 'Ñ', aacute: 'á', eacute: 'é', iacute: 'í', oacute: 'ó', uacute: 'ú', Aacute: 'Á', Eacute: 'É', Iacute: 'Í', Oacute: 'Ó', Uacute: 'Ú', uuml: 'ü' };
+const decodificar = (t) => String(t).replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d)).replace(/&([a-zA-Z]+);/g, (m, n) => ENTIDADES[n] ?? m);
+// "$3,699.00" (formato inglés) o "3.699,00" (formato argentino) -> 3699
+function numero(txt) {
+  let t = String(txt).replace(/[^\d.,]/g, '');
+  const c = t.lastIndexOf(','), d = t.lastIndexOf('.');
+  if (c > -1 && d > -1) t = c > d ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  else if (c > -1) t = /,\d{3}$/.test(t) ? t.replace(/,/g, '') : t.replace(',', '.');
+  else if (d > -1 && /\.\d{3}$/.test(t) && t.indexOf('.') === d) t = t.replace('.', '');
+  const n = parseFloat(t);
+  return isFinite(n) ? n : NaN;
+}
+
+// La Anónima: cada producto es una etiqueta <a data-tipo="portadaProduct" data-nombre="..." data-precio="...">.
+function parsearLaAnonima(html, u) {
+  const out = [];
+  // Etiqueta <a ...> respetando comillas: algunos valores (data-rutacategorias="Almacén > Arroz") contienen ">".
+  for (const [tag] of html.matchAll(/<a\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
+    if (!/data-tipo\s*=\s*"portadaProduct"/.test(tag)) continue;
+    const n = attr(tag, 'data-nombre');
+    const precios = [attr(tag, 'data-precio'), attr(tag, 'data-precio_oferta')].map(parseFloat).filter((x) => x > 0);
+    if (!n || !precios.length) continue;
+    const href = attr(tag, 'href');
+    out.push({ nombre: decodificar(n), precio: Math.min(...precios), precioLista: parseFloat(attr(tag, 'data-precio_anterior')) || undefined, url: href ? new URL(href, u).href : undefined });
+  }
+  const total = html.match(/data-total-productos\s*=\s*"(\d+)"/)?.[1];
+  return { out, diag: `total declarado: ${total ?? 'n/d'}`, valida: /productos-container/.test(html) };
+}
+
+// Dino (dinoonline.com.ar/super, tienda de Supermami): cada producto es un <div class="product" id="prod123"> con
+// <div class="precio-unidad"><span>$3,699.00</span>, <div class="description" title="NOMBRE"> y un enlace /super/producto/...
+function parsearDino(html, u) {
+  const out = [];
+  const inicios = [...html.matchAll(/<div\b[^>]*\bclass="product"[^>]*\bid="prod\d+"[^>]*>/gi)].map((m) => m.index);
+  inicios.forEach((ini, i) => {
+    const bloque = html.slice(ini, inicios[i + 1] ?? ini + 6000);
+    const nombre = bloque.match(/class="description[^"]*"[^>]*\btitle="([^"]*)"/i)?.[1]
+      ?? bloque.match(/class="description[^"]*"[^>]*>\s*([^<]+?)\s*<\/div>/i)?.[1];
+    const precioTxt = bloque.match(/class="precio-unidad"[^>]*>\s*<span>\s*\$?\s*([\d.,]+)/i)?.[1];
+    const href = bloque.match(/<a\s+href="(\/super\/producto\/[^"]+)"/i)?.[1];
+    const precio = precioTxt ? numero(precioTxt) : NaN;
+    if (!nombre || !(precio > 0)) return;
+    out.push({ nombre: decodificar(nombre).replace(/\s+/g, ' ').trim(), precio, url: href ? new URL(href, u).href : undefined });
+  });
+  return { out, diag: `${inicios.length} tarjetas de producto en la página`, valida: /col-lg-8|class="product"/.test(html) };
+}
+
+// Tienda genérica de HTML: pide la página de búsqueda y la lee con `parsear`. Si la frase completa no da resultados,
+// reintenta con menos palabras (algunos buscadores no aceptan frases largas).
+function tiendaHtml({ id, nombre, urlBusqueda, parsear, cookies = () => '' }) {
   return {
     id, nombre, verificado: false,
     async buscar(q, { cp } = {}) {
-      const cookies = [cp ? `codigoPostal=${cp}; seleccionocp=1` : '', process.env.LAANONIMA_COOKIES || ''].filter(Boolean).join('; ');
+      const ck = cookies(cp);
       const headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
         accept: 'text/html,application/xhtml+xml', 'accept-language': 'es-AR,es;q=0.9',
-        ...(cookies ? { cookie: cookies } : {}),
+        ...(ck ? { cookie: ck } : {}),
       };
       const pagina = async (texto) => {
         const u = new URL(urlBusqueda.replace('{q}', encodeURIComponent(texto)));
@@ -114,32 +161,26 @@ function laAnonima({ id, nombre, urlBusqueda }) {
         catch (e) { throw new Error(`${nombre}: no se pudo conectar a ${u.host} (${e.cause?.code || e.message})`); }
         if (!r.ok) throw new Error(`${nombre}: HTTP ${r.status} en ${u.pathname}`);
         const html = await r.text();
-        const out = [];
-        // Etiqueta <a ...> respetando comillas: algunos valores (data-rutacategorias="Almacén > Arroz") contienen ">".
-        for (const [tag] of html.matchAll(/<a\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
-          if (!/data-tipo\s*=\s*"portadaProduct"/.test(tag)) continue;
-          const n = attr(tag, 'data-nombre');
-          const precios = [attr(tag, 'data-precio'), attr(tag, 'data-precio_oferta')].map(parseFloat).filter((x) => x > 0);
-          if (!n || !precios.length) continue;
-          const href = attr(tag, 'href');
-          out.push({ nombre: decodificar(n), precio: Math.min(...precios), precioLista: parseFloat(attr(tag, 'data-precio_anterior')) || undefined, url: href ? new URL(href, u).href : undefined });
-        }
-        const total = html.match(/data-total-productos\s*=\s*"(\d+)"/)?.[1];
-        return { out, html, diag: `${u.pathname} · ${html.length} caracteres · total declarado: ${total ?? 'n/d'}` };
+        const res = parsear(html, u);
+        return { ...res, diag: `${u.pathname} · ${html.length} caracteres · ${res.diag}` };
       };
-      // Si la búsqueda completa no devuelve nada, se prueba con menos palabras (el sitio puede no aceptar frases largas).
       const palabras = q.trim().split(/\s+/);
       let ultimo;
       for (let n = palabras.length; n >= 1; n--) {
         ultimo = await pagina(palabras.slice(0, n).join(' '));
         if (ultimo.out.length) return ultimo.out;
-        if (n === palabras.length && !/productos-container/.test(ultimo.html))
+        if (n === palabras.length && !ultimo.valida)
           throw new Error(`${nombre}: la página no tiene el listado de productos (¿cambió el sitio o bloquea consultas?)`);
       }
       const vacio = []; vacio.diag = ultimo.diag; return vacio; // el sitio respondió pero sin productos
     },
   };
 }
+// La zona de La Anónima se manda por cookies: codigoPostal (el campo de la pantalla) y, opcionalmente, LAANONIMA_COOKIES.
+const laAnonima = ({ id, nombre, urlBusqueda }) => tiendaHtml({ id, nombre, urlBusqueda, parsear: parsearLaAnonima,
+  cookies: (cp) => [cp ? `codigoPostal=${cp}; seleccionocp=1` : '', process.env.LAANONIMA_COOKIES || ''].filter(Boolean).join('; ') });
+// Dino: la sucursal de retiro se guarda en la sesión del sitio; si hace falta, se puede pasar con DINO_COOKIES.
+const dino = ({ id, nombre, urlBusqueda }) => tiendaHtml({ id, nombre, urlBusqueda, parsear: parsearDino, cookies: () => process.env.DINO_COOKIES || '' });
 
 // Sitios que NO son VTEX o cuya API hay que confirmar: se dejan como "pendientes" hasta verificarlos
 // con una consulta real (ver README, sección "Agregar / ajustar un súper").
@@ -153,7 +194,7 @@ const REAL = [
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar', sc: '34' }), // 34 = canal de venta de Córdoba (cookie vtex_segment)
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
   laAnonima({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
-  pendiente('dino', 'Dino'), // https://www.dinoonline.com.ar/super/home : falta ver cómo consulta su buscador
+  dino({ id: 'dino', nombre: 'Dino', urlBusqueda: 'https://www.dinoonline.com.ar/super/categoria?_dyncharset=utf-8&Dy=1&Nty=1&searchUrl=%2Fsuper&containerClass=search_rubricator&Nrpp=48&Ntt={q}' }),
 ];
 
 // Modo prueba: precios simulados y repetibles
@@ -172,4 +213,4 @@ function mock(st) {
   };
 }
 
-module.exports = { STORES: MOCK ? REAL.map(mock) : REAL, MOCK };
+module.exports = { STORES: MOCK ? REAL.map(mock) : REAL, MOCK, _test: { parsearDino, parsearLaAnonima, numero, decodificar } };

@@ -68,4 +68,58 @@ assert.strictEqual(r.ahorros.total, 600);
 assert.strictEqual(r.ahorros.porSuper.y.gasto, 1700);   // a: 700*2 + d: 300
 assert.strictEqual(r.ahorros.porSuper.x.gasto, 1200);    // b + c + e
 assert.strictEqual(analizar([{ nombre: 'a', qty: 1, precios: { x: 10, y: 20 } }], { stores: ['x', 'y'] }).ahorros, null);
+
+const DINO_HTML = `<div class="col-lg-8 col-md-7 col-sm-12"><div class="row">
+<div class="item col-lg-3 col-md-3 col-sm-4 col-xs-6">
+  <div categoryRec="true" class="product"  id="prod2290197" pesable="false" cantBulto="10">
+    <div class="image"><a href="/super/producto/arroz-dos-hermanos-carnaroli-estuche-x-500-gr/_/A-2290197-2290197-s"><img src="//statics.dinoonline.com.ar/x.jpg" alt="ARROZ"/></a></div>
+    <div class="precio-unidad"><span>
+      $3,699.00
+    </span> x un. <br> Precio s/Imp.Nac.: $3,057.02</div>
+    <div class="description limitRow tooltipHere" title="ARROZ DOS HERMANOS CARNAROLI ESTUCHE X 500 GR."  data-toggle="tooltip">
+      ARROZ DOS HERMANOS CARNAROLI ESTUCHE X 500 GR.
+    </div>
+    <div class="precio-referencia">$ 7398.0 x Kilogramo1</div>
+  </div>
+</div>
+<div class="item col-lg-3 col-md-3 col-sm-4 col-xs-6">
+  <div categoryRec="true" class="product"  id="prod2290320" pesable="false" cantBulto="10">
+    <div class="image"><a href="/super/producto/arroz-dos-hermanos-doble-carolina-x-1-kg/_/A-2290320-2290320-s"></a></div>
+    <div class="precio-unidad"><span>
+      $2,599.00
+    </span> x un.</div>
+    <div class="description limitRow" title="ARROZ DOS HERMANOS DOBLE CAROLINA X 1 KG.">ARROZ DOS HERMANOS DOBLE CAROLINA X 1 KG.</div>
+  </div>
+</div></div></div>`;
+
+// Dino: tarjetas de producto reales
+const { _test } = require('./stores');
+const d = _test.parsearDino(DINO_HTML, new URL('https://www.dinoonline.com.ar/super/categoria?Ntt=arroz'));
+assert.strictEqual(d.out.length, 2);
+assert.strictEqual(d.out[0].nombre, 'ARROZ DOS HERMANOS CARNAROLI ESTUCHE X 500 GR.');
+assert.strictEqual(d.out[0].precio, 3699);
+assert.strictEqual(d.out[1].precio, 2599);
+assert.strictEqual(d.out[1].url, 'https://www.dinoonline.com.ar/super/producto/arroz-dos-hermanos-doble-carolina-x-1-kg/_/A-2290320-2290320-s');
+assert.strictEqual(d.valida, true);
+// y el matching elige el producto del tamaño pedido
+const mm = elegir('arroz dos hermanos doble carolina 1 kg', d.out);
+assert.strictEqual(mm.precio, 2599); assert.strictEqual(mm.tipo, 'exacto');
+// formatos de número
+assert.strictEqual(_test.numero('$3,699.00'), 3699); assert.strictEqual(_test.numero('3.699,50'), 3699.5);
+assert.strictEqual(_test.numero('2599.0'), 2599); assert.strictEqual(_test.numero('1.250'), 1250); assert.strictEqual(_test.numero('99,90'), 99.9);
+assert.strictEqual(_test.decodificar('CAF&Eacute; &amp; T&#201;'), 'CAFÉ & TÉ');
+// La Anónima: etiqueta con ">" dentro de un atributo
+const la = _test.parsearLaAnonima(`<div id="productos-container" data-total-productos="786"><a href="/arroz-gallo/art_1/" data-tipo="portadaProduct" data-nombre = "Arroz Gallo x 1 Kg." data-rutacategorias = "Almacén  > Arroz" data-precio = "2450" data-precio_anterior = "2882.35" data-precio_oferta = "2450"></a>`, new URL('https://www.laanonima.com.ar/buscar/arroz'));
+assert.strictEqual(la.out.length, 1); assert.strictEqual(la.out[0].precio, 2450); assert.strictEqual(la.valida, true);
+
+// Búsqueda completa de Dino con la red simulada: reintenta con menos palabras
+(async () => {
+  const pedidas = [];
+  global.fetch = async (u) => { pedidas.push(decodeURIComponent(new URL(u).searchParams.get('Ntt'))); return { ok: true, text: async () => (pedidas.length < 2 ? '<div class="col-lg-8"></div>' : DINO_HTML) }; };
+  const dinoStore = require('./stores').STORES.find((x) => x.id === 'dino');
+  const r = await dinoStore.buscar('arroz marca inexistente 1 kg');
+  assert.deepStrictEqual(pedidas, ['arroz marca inexistente 1 kg', 'arroz marca inexistente 1']);
+  assert.strictEqual(r.length, 2);
+  console.log('OK tiendas');
+})();
 console.log('OK');

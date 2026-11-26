@@ -54,6 +54,9 @@ Vercel no mantiene un servidor encendido: corre las funciones de `api/` en cada 
 
 **Advertencia:** algunos supermercados bloquean o limitan consultas que vienen de servidores en la nube (a veces solo aceptan IPs de Argentina). No se puede saber hasta probarlo. Si falla online pero anda en tu computadora, la alternativa es dejar el servidor en una PC de tu casa, o elegir un proveedor con servidores en Argentina/Sudamérica.
 
+## Dino
+Dino (`dinoonline.com.ar/super`, la tienda online de Supermami) se lee del HTML de su página de búsqueda (`parsearDino` en `stores.js`: tarjetas `<div class="product">` con `precio-unidad` y `description`). Probado con fragmentos reales pegados, no en vivo. Muestra solo la primera página de resultados. La sucursal de retiro se guarda en la sesión del sitio: si los precios no coinciden con los de tu sucursal, se pueden pasar cookies con la variable `DINO_COOKIES` (sin datos de cuenta).
+
 ## Fijar la zona de un súper a mano (variables de entorno)
 Si un súper no reconoce el código postal (el aviso debajo del análisis lo indica), se puede fijar su zona con estas variables, usando el id del súper en mayúsculas (`CARREFOUR`, `DISCO`, `VEA`, `CHANGOMAS`):
 - `SC_<SUPER>`: canal de venta. Disco y Vea definen la zona así: el valor está en la cookie `vtex_segment` del navegador (campo `channel`, que se ve con `atob(...)` o decodificándola en base64). Disco viene con `33` y Vea con `34` (Córdoba).
