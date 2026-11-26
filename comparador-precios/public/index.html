@@ -20,7 +20,8 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 .plan{font-size:17px;font-weight:700}li{margin:4px 0}.warn{color:var(--neart);font-size:13px;margin-top:6px}td.cell{cursor:pointer}
 .ops{margin-top:6px;border:1px solid var(--bd);border-radius:8px;padding:4px;background:var(--bg);min-width:200px}
 .ops button{display:block;width:100%;text-align:left;font-size:12px;margin:2px 0;padding:4px 6px}.ops button.on{border-color:var(--acc)}
-@media print{body{background:#fff;color:#000;padding:0}#ctrl,#add,.lnk,.ops,#modo,td button,.noprint{display:none!important}.card{border:0;padding:0}input{border:0;padding:0}}
+#cabImp{display:none}.its{margin:4px 0 0;padding-left:18px;columns:2;column-gap:24px}.its li{margin:1px 0;break-inside:avoid}
+@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:#fff;color:#000;padding:0;font-size:13px}#ctrl,#add,.lnk,.ops,#modo,td button,.noprint,dialog,h1{display:none!important}.card{border:0;padding:0;background:#fff}input{border:0;padding:0;background:none;color:#000}#cabImp{display:block;margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px}#cabImp h2{margin:0;font-size:20px}body[data-print=lista] .card:not(#analisis){display:none!important}body[data-print=tabla] #analisis{display:none!important}body[data-print=lista] .its{columns:1;list-style:none;padding-left:4px}body[data-print=lista] .its li{margin:5px 0;font-size:15px}body[data-print=lista] .its li::before{content:'\2610\00a0\00a0'}body[data-print=lista] .pl{list-style:none;padding:0;margin:0}body[data-print=lista] .pl>li{break-inside:avoid;margin:14px 0 0;border-top:1px solid #999;padding-top:8px}body[data-print=lista] .pl>li:first-child{border-top:0}body[data-print=tabla] .sub{font-size:9px;max-width:none}body[data-print=tabla] th,body[data-print=tabla] td{padding:3px 5px}body[data-print=tabla] .c{padding:1px 4px}body[data-print=tabla] tr{break-inside:avoid}body[data-print=tabla] #ts{margin:0 0 4px}body[data-print=lista] .plan{font-size:18px}table{min-width:0}th,td{padding:4px 6px}}
 dialog{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:10px;width:min(560px,92vw);padding:16px}
 dialog::backdrop{background:rgba(0,0,0,.5)}dialog textarea{width:100%;min-height:150px;font:13px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:8px}
 dialog .row{margin-top:10px}dialog label.o{flex-direction:row;gap:4px;align-items:center;color:var(--tx);font-size:14px}
@@ -30,6 +31,7 @@ td input.nm{font-weight:600;border-color:transparent;background:transparent;curs
 </style></head><body>
 <h1>Comparador de precios de supermercados · Córdoba</h1>
 <div class="mut" id="modo"></div>
+<div id="cabImp"></div>
 
 <div class="card" id="ctrl">
   <div class="row">
@@ -43,7 +45,7 @@ td input.nm{font-weight:600;border-color:transparent;background:transparent;curs
     <label>Diferencia que se considera "poca" (%) <input type="number" id="tol" value="3" min="0" step="0.5" style="width:120px"></label>
     <button class="p" id="go">Buscar precios</button><button id="todo" hidden title="Vuelve a consultar los precios de todos los productos">↻ Actualizar todo</button>
     <button id="csv">Importar lista</button><button id="clear">Vaciar</button>
-    <button id="exp">Exportar a Excel (CSV)</button><button id="imp">Imprimir</button>
+    <button id="orden" title="Ordena los productos de la planilla de la A a la Z">Ordenar A-Z</button><button id="exp">Exportar a Excel (CSV)</button><button id="impLista" title="Hoja con qué comprar en cada súper, para llevar">🖨 Imprimir lista de compras</button><button id="impTabla" title="La planilla con todos los precios">🖨 Imprimir comparación</button>
   </div>
   <div class="mut" style="margin-top:6px">Verde = más barato · amarillo = casi igual (dentro de la tolerancia) · rojo = más caro. En cada celda: <b>otras opciones</b> para elegir otro producto, o doble clic en el precio para escribirlo a mano.</div>
 </div>
@@ -206,7 +208,19 @@ $('#okImp').onclick=()=>{ const l=previa(); if(!l.length) return;
   L().filas=reemplazar?l:filas().filter(f=>f.nombre.trim()).concat(l); abierta=null; save(); render(); mostrarAnalisis(); dlg.close() };
 $('#tol').onchange=()=>{render();mostrarAnalisis()}; $('#costo').onchange=mostrarAnalisis;
 $('#cp').onchange=()=>{abierta=null;save();render();mostrarAnalisis()};      // cada zona tiene sus propios precios guardados
-$('#imp').onclick=()=>window.print();
+$('#orden').onclick=()=>{ L().filas.sort((a,b)=>(!a.nombre.trim())-(!b.nombre.trim())||alfa(a.nombre,b.nombre)); abierta=null; save(); render(); mostrarAnalisis() };
+/* ---------- Imprimir: lista de compras (qué comprar en cada súper) o comparación (la planilla) ---------- */
+function imprimir(modo){
+  if(modo==='lista'&&$('#analisis').hidden) return alert('Primero buscá los precios para armar la lista de compras.');
+  if(modo==='tabla'&&!filasRes().some(r=>r.hay)) return alert('Primero buscá los precios.');
+  $('#cabImp').innerHTML=`<h2>${modo==='lista'?'Lista de compras':'Comparación de precios'} — ${esc(actual)}</h2><div>${new Date().toLocaleDateString('es-AR')} · Córdoba${CP()?' · CP '+esc(CP()):''}</div>`;
+  document.body.dataset.print=modo;
+  const pg=document.createElement('style'); pg.textContent=`@page{size:A4 ${modo==='tabla'?'landscape':'portrait'};margin:12mm}`; document.head.appendChild(pg);
+  const fin=()=>{ delete document.body.dataset.print; pg.remove(); window.removeEventListener('afterprint',fin) };
+  window.addEventListener('afterprint',fin);
+  window.print();
+}
+$('#impLista').onclick=()=>imprimir('lista'); $('#impTabla').onclick=()=>imprimir('tabla');
 
 /* ---------- Consultar precios (solo lo que falta, o todo si se pide) ---------- */
 // tareas: [{nombre,key,stores}]. Cada súper puede tener su propio texto de búsqueda ("búsqueda propia").
@@ -272,9 +286,9 @@ function mostrarAnalisis(){
   const ah=a.ahorros, viaje=costo*(e.stores.length-1);
   const lista=ah?Object.entries(ah.porSuper).sort((x,y)=>alfa(nom(x[0]),nom(y[0]))).map(([s,g])=>{
       const sec=s!==ah.principal, n=ah.cuenta[s]||g.items.length;
-      const items=[...g.items].sort((x,y)=>alfa(x.nombre,y.nombre)).map(x=>`${esc(x.nombre)} ×${x.qty} (${money(x.precio)}${x.ahorro>0?`, <span class="ahorro">−${money(x.ahorro)}</span>`:''}${sec&&x.precioPrincipal==null?`, no lo tiene ${esc(nom(ah.principal))}`:''})`).join(', ');
-      return `<li><b>${esc(nom(s))}</b> — ${n} de ${ah.totalItems} producto(s) · <b>total a pagar ${money(g.gasto)}</b>${sec?'':' · súper principal'}${sec&&g.ahorro>0?` · <span class="ahorro">ahorrás ${money(g.ahorro)}</span> <small>comprando estos acá y no en ${esc(nom(ah.principal))}</small>`:''}<br>${items}</li>`}).join('')
-    :Object.entries(porSuper).sort((x,y)=>alfa(nom(x[0]),nom(y[0]))).map(([s,l])=>`<li><b>${esc(nom(s))}</b> — ${l.length} producto(s) · <b>total a pagar ${money(l.reduce((t,x)=>t+x.p*x.q,0))}</b><br>${[...l].sort((x,y)=>alfa(x.n,y.n)).map(x=>`${esc(x.n)} ×${x.q} (${money(x.p)})`).join(', ')}</li>`).join('');
+      const items=[...g.items].sort((x,y)=>alfa(x.nombre,y.nombre)).map(x=>`<li>${esc(x.nombre)} ×${x.qty} (${money(x.precio)}${x.ahorro>0?`, <span class="ahorro">−${money(x.ahorro)}</span>`:''}${sec&&x.precioPrincipal==null?`, no lo tiene ${esc(nom(ah.principal))}`:''})</li>`).join('');
+      return `<li><b>${esc(nom(s))}</b> — ${n} de ${ah.totalItems} producto(s) · <b>total a pagar ${money(g.gasto)}</b>${sec?'':' · súper principal'}${sec&&g.ahorro>0?` · <span class="ahorro">ahorrás ${money(g.ahorro)}</span> <small>comprando estos acá y no en ${esc(nom(ah.principal))}</small>`:''}<ul class="its">${items}</ul></li>`}).join('')
+    :Object.entries(porSuper).sort((x,y)=>alfa(nom(x[0]),nom(y[0]))).map(([s,l])=>`<li><b>${esc(nom(s))}</b> — ${l.length} producto(s) · <b>total a pagar ${money(l.reduce((t,x)=>t+x.p*x.q,0))}</b><ul class="its">${[...l].sort((x,y)=>alfa(x.n,y.n)).map(x=>`<li>${esc(x.n)} ×${x.q} (${money(x.p)})</li>`).join('')}</ul></li>`).join('');
   const resumen=ah?`<div style="margin:6px 0">Ahorro total frente a comprar todo en ${esc(nom(ah.principal))}: <span class="ahorro">${money(ah.total)}</span> <small class="mut">(sin contar el recorrido)</small>${viaje?` · costo estimado de ir a ${e.stores.length-1} súper(s) más: ${money(viaje)} · <b>ahorro neto: ${money(ah.total-viaje)}</b>`:''}</div>`:'';
   el.innerHTML=`<div class="plan">Recomendación: ${e.stores.map(nom).map(esc).join(' + ')} · ${money(e.suma)}${e.stores.length>1?` + ${money(viaje)} de recorrido`:''}</div>
   ${resumen}
