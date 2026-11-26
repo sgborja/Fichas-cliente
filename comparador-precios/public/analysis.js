@@ -5,6 +5,7 @@
   function analizar(results, opts) {
     const stores = opts.stores;
     const costoViaje = opts.costoViaje || 0;
+    const nm = (id) => (opts.nombres && opts.nombres[id]) || id;
     const tolerancia = (opts.tolerancia ?? 3) / 100;
     const total = (sub) => {
       let suma = 0, faltan = 0;
@@ -45,7 +46,7 @@
     if (casi) notas.push(`Un plan con ${mejor.stores.length} súper ahorraría solo $${(casi.costo - mejor.costo).toFixed(0)} más que el de ${casi.stores.length}: no vale la pena el recorrido extra (tolerancia ${(tolerancia*100).toFixed(0)}%).`);
     if (unaSola && elegido.stores.length > 1) {
       const ahorro = unaSola.costo - elegido.costo;
-      notas.push(`Dividir la compra en ${elegido.stores.length} súper ahorra $${ahorro.toFixed(0)} frente a comprar todo en ${unaSola.stores[0]} (ya descontado el costo de recorrido).`);
+      notas.push(`Dividir la compra en ${elegido.stores.length} súper ahorra $${ahorro.toFixed(0)} frente a comprar todo en ${nm(unaSola.stores[0])} (ya descontado el costo de recorrido).`);
     }
     // Aporte de cada super del plan: cuánto subiría el total si se lo saca
     const aportes = elegido.stores.length > 1 ? elegido.stores.map((s) => {
@@ -55,8 +56,31 @@
     }) : [];
     for (const a of aportes)
       if (a.extra < costoViaje && a.faltanSin === elegido.faltan)
-        notas.push(`${a.store} aporta solo $${a.extra.toFixed(0)} de ahorro, menos que el costo del viaje ($${costoViaje}).`);
-    return { elegido, unaSola, ideal: { suma: ideal.suma }, notas, aportes };
+        notas.push(`${nm(a.store)} aporta solo $${a.extra.toFixed(0)} de ahorro, menos que el costo del viaje ($${costoViaje}).`);
+    return { elegido, unaSola, ideal: { suma: ideal.suma }, notas, aportes, ahorros: ahorros(results, elegido) };
+  }
+
+  // Cuánto se ahorra en cada súper del plan frente a comprar esos mismos productos en el súper principal
+  // (el que concentra más productos). No incluye el costo extra del recorrido.
+  function ahorros(rows, elegido) {
+    const stores = elegido.stores;
+    if (stores.length < 2) return null;
+    const cuenta = {}, gasto = {};
+    elegido.asign.forEach((x, i) => { if (x) { cuenta[x.store] = (cuenta[x.store] || 0) + 1; gasto[x.store] = (gasto[x.store] || 0) + x.precio * (rows[i].qty || 1); } });
+    const principal = [...stores].sort((a, b) => (cuenta[b] || 0) - (cuenta[a] || 0) || (gasto[b] || 0) - (gasto[a] || 0))[0];
+    const porSuper = {};
+    let total = 0;
+    elegido.asign.forEach((x, i) => {
+      if (!x) return;
+      const r = rows[i], q = r.qty || 1, pp = r.precios[principal];
+      const g = (porSuper[x.store] ||= { items: [], ahorro: 0, sinAlternativa: 0 });
+      let ahorro = null;
+      if (x.store !== principal) {
+        if (pp != null) { ahorro = (pp - x.precio) * q; g.ahorro += ahorro; total += ahorro; } else g.sinAlternativa++;
+      }
+      g.items.push({ nombre: r.nombre, qty: q, precio: x.precio, ahorro, precioPrincipal: pp ?? null });
+    });
+    return { principal, porSuper, total, cuenta, totalItems: elegido.asign.filter(Boolean).length };
   }
 
   // Color por fila: 'barato' (mínimo), 'cerca' (≤ tol sobre mínimo), 'caro' (máximo), '' resto
