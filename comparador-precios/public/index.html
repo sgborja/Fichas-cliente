@@ -272,8 +272,8 @@ function mostrarAnalisis(){
   const lista=ah?Object.entries(ah.porSuper).sort((x,y)=>(x[0]===ah.principal?-1:y[0]===ah.principal?1:0)).map(([s,g])=>{
       const sec=s!==ah.principal, n=ah.cuenta[s]||g.items.length;
       const items=g.items.map(x=>`${esc(x.nombre)} ×${x.qty} (${money(x.precio)}${x.ahorro>0?`, <span class="ahorro">−${money(x.ahorro)}</span>`:''}${sec&&x.precioPrincipal==null?`, no lo tiene ${esc(nom(ah.principal))}`:''})`).join(', ');
-      return `<li><b>${esc(nom(s))}</b> — ${n} de ${ah.totalItems} producto(s)${sec?'':' · súper principal'}${sec&&g.ahorro>0?` · <span class="ahorro">ahorrás ${money(g.ahorro)}</span> <small>comprando estos acá y no en ${esc(nom(ah.principal))}</small>`:''}<br>${items}</li>`}).join('')
-    :Object.entries(porSuper).map(([s,l])=>`<li><b>${esc(nom(s))}</b>: ${l.map(x=>`${esc(x.n)} ×${x.q} (${money(x.p)})`).join(', ')}</li>`).join('');
+      return `<li><b>${esc(nom(s))}</b> — ${n} de ${ah.totalItems} producto(s) · <b>total a pagar ${money(g.gasto)}</b>${sec?'':' · súper principal'}${sec&&g.ahorro>0?` · <span class="ahorro">ahorrás ${money(g.ahorro)}</span> <small>comprando estos acá y no en ${esc(nom(ah.principal))}</small>`:''}<br>${items}</li>`}).join('')
+    :Object.entries(porSuper).map(([s,l])=>`<li><b>${esc(nom(s))}</b> — ${l.length} producto(s) · <b>total a pagar ${money(l.reduce((t,x)=>t+x.p*x.q,0))}</b><br>${l.map(x=>`${esc(x.n)} ×${x.q} (${money(x.p)})`).join(', ')}</li>`).join('');
   const resumen=ah?`<div style="margin:6px 0">Ahorro total frente a comprar todo en ${esc(nom(ah.principal))}: <span class="ahorro">${money(ah.total)}</span> <small class="mut">(sin contar el recorrido)</small>${viaje?` · costo estimado de ir a ${e.stores.length-1} súper(s) más: ${money(viaje)} · <b>ahorro neto: ${money(ah.total-viaje)}</b>`:''}</div>`:'';
   el.innerHTML=`<div class="plan">Recomendación: ${e.stores.map(nom).map(esc).join(' + ')} · ${money(e.suma)}${e.stores.length>1?` + ${money(viaje)} de recorrido`:''}</div>
   ${resumen}
@@ -293,7 +293,7 @@ $('#exp').onclick=()=>{
     filasCsv.push([r.nombre,r.qty,...cel,best?best.n:''])});
   if(ultimoPlan){ filasCsv.push([]); filasCsv.push(['RECOMENDACIÓN',ultimoPlan.a.elegido.stores.map(nom).join(' + '),'Total',Math.round(ultimoPlan.a.elegido.suma)]);
     const ah=ultimoPlan.a.ahorros;
-    for(const [s,l] of Object.entries(ultimoPlan.porSuper)){ const g=ah&&ah.porSuper[s]; filasCsv.push([nom(s),l.map(x=>`${x.n} x${x.q} ($${Math.round(x.p)})`).join(' | '),g&&s!==ah.principal?'Ahorro vs '+nom(ah.principal):'',g&&s!==ah.principal?Math.round(g.ahorro):'']) }
+    for(const [s,l] of Object.entries(ultimoPlan.porSuper)){ const g=ah&&ah.porSuper[s]; filasCsv.push([nom(s),l.map(x=>`${x.n} x${x.q} ($${Math.round(x.p)})`).join(' | '),'Total a pagar',Math.round(l.reduce((t,x)=>t+x.p*x.q,0)),g&&s!==ah.principal?'Ahorro vs '+nom(ah.principal):'',g&&s!==ah.principal?Math.round(g.ahorro):'']) }
     if(ah) filasCsv.push(['Ahorro total vs todo en '+nom(ah.principal),Math.round(ah.total),'Costo de recorrido',Math.round(ultimoPlan.costo*(ultimoPlan.a.elegido.stores.length-1))]);
     ultimoPlan.a.notas.forEach(n=>filasCsv.push(['Nota',n])); }
   const csv='﻿'+filasCsv.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(';')).join('\r\n');

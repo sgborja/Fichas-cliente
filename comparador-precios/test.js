@@ -65,5 +65,7 @@ assert.strictEqual(r.ahorros.principal, 'x');
 assert.strictEqual(r.ahorros.porSuper.y.ahorro, 600);
 assert.strictEqual(r.ahorros.porSuper.y.sinAlternativa, 1);
 assert.strictEqual(r.ahorros.total, 600);
+assert.strictEqual(r.ahorros.porSuper.y.gasto, 1700);   // a: 700*2 + d: 300
+assert.strictEqual(r.ahorros.porSuper.x.gasto, 1200);    // b + c + e
 assert.strictEqual(analizar([{ nombre: 'a', qty: 1, precios: { x: 10, y: 20 } }], { stores: ['x', 'y'] }).ahorros, null);
 console.log('OK');
