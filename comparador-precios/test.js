@@ -46,4 +46,11 @@ assert.strictEqual(rk.length, 2); assert.strictEqual(rk[0].descuento === undefin
 assert.strictEqual(rankear('arroz', [{ nombre: 'Fideos', precio: 1 }]).length, 0);
 assert.strictEqual(rankear('arroz', [{ nombre: 'Arroz', precio: 2750, precioLista: 275000 }])[0].descuento, undefined);
 assert.strictEqual(rankear('arroz', [{ nombre: 'Arroz', precio: 800, precioLista: 1000 }])[0].descuento, 20);
+// Importar listas
+const { parsearLista } = require('./public/importar');
+assert.deepStrictEqual(parsearLista('Producto;Cantidad\r\nleche entera 1l;2\r\narroz gallo 1 kg;1\r\n'), [{ nombre: 'leche entera 1l', qty: 2 }, { nombre: 'arroz gallo 1 kg', qty: 1 }]);
+assert.deepStrictEqual(parsearLista('\uFEFF"aceite, girasol 900ml";3\npapel higienico'), [{ nombre: 'aceite, girasol 900ml', qty: 3 }, { nombre: 'papel higienico', qty: 1 }]);
+assert.deepStrictEqual(parsearLista('yerba 1 kg, 2\nleche 1,5 l'), [{ nombre: 'yerba 1 kg', qty: 2 }, { nombre: 'leche 1,5 l', qty: 1 }]);
+assert.deepStrictEqual(parsearLista('azucar 1kg\t4\nfideos\t'), [{ nombre: 'azucar 1kg', qty: 4 }, { nombre: 'fideos', qty: 1 }]);
+assert.deepStrictEqual(parsearLista(''), []);
 console.log('OK');

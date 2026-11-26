@@ -21,6 +21,9 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 .ops{margin-top:6px;border:1px solid var(--bd);border-radius:8px;padding:4px;background:var(--bg);min-width:200px}
 .ops button{display:block;width:100%;text-align:left;font-size:12px;margin:2px 0;padding:4px 6px}.ops button.on{border-color:var(--acc)}
 @media print{body{background:#fff;color:#000;padding:0}#ctrl,#add,.lnk,.ops,#modo,td button,.noprint{display:none!important}.card{border:0;padding:0}input{border:0;padding:0}}
+dialog{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:10px;width:min(560px,92vw);padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.5)}dialog textarea{width:100%;min-height:150px;font:13px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:8px}
+dialog .row{margin-top:10px}dialog label.o{flex-direction:row;gap:4px;align-items:center;color:var(--tx);font-size:14px}
 </style></head><body>
 <h1>Comparador de precios de supermercados · Córdoba</h1>
 <div class="mut" id="modo"></div>
@@ -36,7 +39,7 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
     <label>Costo extra por cada súper adicional ($) <input type="number" id="costo" value="1500" min="0" style="width:120px"></label>
     <label>Diferencia que se considera "poca" (%) <input type="number" id="tol" value="3" min="0" step="0.5" style="width:120px"></label>
     <button class="p" id="go">Buscar precios</button>
-    <button id="csv">Pegar lista</button><button id="clear">Vaciar</button>
+    <button id="csv">Importar lista</button><button id="clear">Vaciar</button>
     <button id="exp">Exportar a Excel (CSV)</button><button id="imp">Imprimir</button>
   </div>
   <div class="mut" style="margin-top:6px">Verde = más barato · amarillo = casi igual (dentro de la tolerancia) · rojo = más caro. En cada celda: <b>otras opciones</b> para elegir otro producto, o doble clic en el precio para escribirlo a mano.</div>
@@ -45,8 +48,18 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 <div class="card wrap"><div class="mut" id="ts" style="margin-bottom:6px"></div><table id="t"><thead></thead><tbody></tbody></table>
   <button id="add" style="margin-top:8px">+ Producto</button></div>
 <div class="card" id="analisis" hidden></div>
+<dialog id="dlg">
+  <h3 style="margin:0 0 6px">Importar lista de productos</h3>
+  <div class="mut">Elegí un archivo <b>.csv</b> o pegá abajo. Sirve un producto por línea, o con cantidad: <code>producto; cantidad</code>. Desde Excel: seleccioná las celdas, copiá y pegá acá (o guardá como CSV).</div>
+  <div class="row"><input type="file" id="fileImp" accept=".csv,.txt,text/csv,text/plain"><a href="#" id="plantilla" class="mut">Descargar plantilla</a></div>
+  <textarea id="txtImp" placeholder="leche entera 1l; 2&#10;arroz parboil gallo 1 kg; 1" style="margin-top:10px"></textarea>
+  <div class="mut" id="prevImp" style="margin-top:6px"></div>
+  <div class="row"><label class="o"><input type="radio" name="modoImp" value="agregar" checked> Agregar a la lista</label><label class="o"><input type="radio" name="modoImp" value="reemplazar"> Reemplazar la lista</label></div>
+  <div class="row" style="justify-content:flex-end"><button id="cancelImp">Cancelar</button><button class="p" id="okImp">Importar</button></div>
+</dialog>
 
 <script src="analysis.js"></script>
+<script src="importar.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -135,8 +148,17 @@ $('#t').addEventListener('dblclick',e=>{const td=e.target.closest('td.cell'); co
   save(); render(); mostrarAnalisis()});
 $('#add').onclick=()=>{filas().push({nombre:'',qty:1});L().res=null;save();render()};
 $('#clear').onclick=()=>{L().filas=[];L().res=null;save();render();$('#analisis').hidden=true};
-$('#csv').onclick=()=>{const t=prompt('Pegá un producto por línea (opcional: "producto; cantidad"):');if(!t)return;
-  L().filas=t.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const [n,q]=l.split(/[;\t]/);return{nombre:n.trim(),qty:+q||1}});L().res=null;save();render();mostrarAnalisis()};
+/* ---------- Importar lista (CSV / Excel pegado) ---------- */
+const dlg=$('#dlg');
+function previa(){ const l=Importar.parsearLista($('#txtImp').value); $('#prevImp').textContent=l.length?('Se detectaron '+l.length+' producto(s): '+l.slice(0,3).map(x=>x.nombre+' ×'+x.qty).join(', ')+(l.length>3?'…':'')):'Todavía no hay productos para importar.'; return l }
+$('#csv').onclick=()=>{ $('#txtImp').value=''; $('#fileImp').value=''; document.querySelector('input[name=modoImp][value=agregar]').checked=true; previa(); dlg.showModal() };
+$('#txtImp').oninput=previa;
+$('#fileImp').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ $('#txtImp').value=Importar.decodificar(await f.arrayBuffer()); previa() }catch{ alert('No se pudo leer el archivo. Probá guardarlo como CSV o copiá y pegá las celdas.') } };
+$('#cancelImp').onclick=()=>dlg.close();
+$('#plantilla').onclick=e=>{ e.preventDefault(); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([Importar.PLANTILLA],{type:'text/csv;charset=utf-8'})); a.download='plantilla-lista.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000) };
+$('#okImp').onclick=()=>{ const l=previa(); if(!l.length) return;
+  const reemplazar=document.querySelector('input[name=modoImp]:checked').value==='reemplazar';
+  L().filas=reemplazar?l:filas().filter(f=>f.nombre.trim()).concat(l); L().res=null; abierta=null; save(); render(); mostrarAnalisis(); dlg.close() };
 $('#tol').onchange=()=>{render();mostrarAnalisis()}; $('#costo').onchange=mostrarAnalisis;
 $('#cp').onchange=()=>{L().res=null;save();render();$('#analisis').hidden=true};
 $('#imp').onclick=()=>window.print();
