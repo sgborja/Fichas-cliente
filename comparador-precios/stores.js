@@ -3,7 +3,9 @@ const MOCK = process.env.MOCK === '1';
 const UA = 'Mozilla/5.0 (compatible; ComparadorPrecios/1.0)';
 
 // Plataforma VTEX (la usan Carrefour, Disco, Vea, Changomás...). Endpoint público de catálogo.
-function vtex({ id, nombre, base, sc }) {
+function vtex({ id, nombre, base, sc: scBase }) {
+  // Canal de venta (sc): en algunas cadenas (Disco, Vea) la zona se define así y no por región. Se puede cambiar con SC_<SUPER>.
+  const sc = process.env['SC_' + id.toUpperCase()] || scBase || '';
   const headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
     accept: 'application/json, text/plain, */*', 'accept-language': 'es-AR,es;q=0.9',
@@ -28,7 +30,7 @@ function vtex({ id, nombre, base, sc }) {
       if (!offer || !(offer.Price > 0)) continue;
       out.push({
         nombre: p.productName, precio: offer.Price, precioLista: offer.ListPrice, url: p.link, imagen: it.images?.[0]?.imageUrl,
-        detalle: { fuente, region: rid || null, vendedor: vend.sellerId, vendedorPrincipal: !!vend.sellerDefault, Price: offer.Price, ListPrice: offer.ListPrice,
+        detalle: { fuente, region: rid || null, vendedor: vend.sellerId, vendedorPrincipal: !!vend.sellerDefault, canal: sc || null, Price: offer.Price, ListPrice: offer.ListPrice,
           PriceWithoutDiscount: offer.PriceWithoutDiscount, spotPrice: offer.spotPrice, multiplicador: it.unitMultiplier, medida: it.measurementUnit },
       });
     }
@@ -38,6 +40,7 @@ function vtex({ id, nombre, base, sc }) {
   // Se puede fijar la zona a mano con la variable REGION_<SUPER> (ej. REGION_DISCO), sin consultar el código postal.
   const regiones = new Map();
   const region = async (cp) => {
+    if (sc) return { rid: null, nota: `zona por canal de venta (sc=${sc})`, porCanal: true };
     const fija = process.env['REGION_' + id.toUpperCase()];
     if (fija) return { rid: fija, nota: 'zona fijada por variable de entorno' };
     if (!cp) return { rid: null, nota: 'sin código postal' };
@@ -69,9 +72,9 @@ function vtex({ id, nombre, base, sc }) {
   return {
     id, nombre, verificado: false,
     async buscar(q, { cp } = {}) {
-      const { rid, nota } = await region(cp);
+      const { rid, nota, porCanal } = await region(cp);
       // La búsqueda inteligente acepta zona; la clásica no. Con código postal se prueba primero la inteligente.
-      const orden = (cp || rid) ? [['inteligente', () => inteligente(q, rid)], ['clasica', () => clasica(q)]]
+      const orden = (cp || rid || sc) ? [['inteligente', () => inteligente(q, rid)], ['clasica', () => clasica(q)]]
                        : [['clasica', () => clasica(q)], ['inteligente', () => inteligente(q, null)]];
       const errores = [];
       for (const [n, f] of orden) {
@@ -80,7 +83,7 @@ function vtex({ id, nombre, base, sc }) {
           // Si con zona no hay resultados, se reintenta con precios generales (mejor eso que nada).
           let notaFinal = nota;
           if (!out.length && n === 'inteligente' && rid) { out = await inteligente(q, null); usoRegion = null; notaFinal = 'con esa zona el sitio no devolvió resultados; se usó el precio general'; }
-          out.regionId = usoRegion; out.regionNota = usoRegion ? '' : notaFinal; return out;
+          out.regionId = usoRegion; out.regionNota = usoRegion ? '' : notaFinal; out.canal = porCanal ? sc : null; return out;
         }
         catch (e) { errores.push(e.message); }
       }
@@ -146,7 +149,7 @@ function pendiente(id, nombre) {
 
 const REAL = [
   vtex({ id: 'carrefour', nombre: 'Carrefour', base: 'https://www.carrefour.com.ar' }),
-  vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar' }),
+  vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar', sc: '33' }), // 33 = canal de venta de Córdoba (cookie vtex_segment)
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
   laAnonima({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
