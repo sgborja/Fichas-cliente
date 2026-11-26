@@ -73,7 +73,8 @@
     elegido.asign.forEach((x, i) => {
       if (!x) return;
       const r = rows[i], q = r.qty || 1, pp = r.precios[principal];
-      const g = (porSuper[x.store] ||= { items: [], ahorro: 0, sinAlternativa: 0 });
+      const g = (porSuper[x.store] ||= { items: [], ahorro: 0, sinAlternativa: 0, gasto: 0 });
+      g.gasto += x.precio * q;
       let ahorro = null;
       if (x.store !== principal) {
         if (pp != null) { ahorro = (pp - x.precio) * q; g.ahorro += ahorro; total += ahorro; } else g.sinAlternativa++;
