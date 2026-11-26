@@ -53,4 +53,17 @@ assert.deepStrictEqual(parsearLista('\uFEFF"aceite, girasol 900ml";3\npapel higi
 assert.deepStrictEqual(parsearLista('yerba 1 kg, 2\nleche 1,5 l'), [{ nombre: 'yerba 1 kg', qty: 2 }, { nombre: 'leche 1,5 l', qty: 1 }]);
 assert.deepStrictEqual(parsearLista('azucar 1kg\t4\nfideos\t'), [{ nombre: 'azucar 1kg', qty: 4 }, { nombre: 'fideos', qty: 1 }]);
 assert.deepStrictEqual(parsearLista(''), []);
+// Ahorro por súper (sin costo de recorrido)
+r = analizar([
+  { nombre: 'a', qty: 2, precios: { x: 1000, y: 700 } },
+  { nombre: 'b', qty: 1, precios: { x: 500, y: 900 } },
+  { nombre: 'c', qty: 1, precios: { x: 400, y: 600 } },
+  { nombre: 'e', qty: 1, precios: { x: 300, y: 800 } },
+  { nombre: 'd', qty: 1, precios: { x: null, y: 300 } },
+], { stores: ['x', 'y'], costoViaje: 100, tolerancia: 0 });
+assert.strictEqual(r.ahorros.principal, 'x');
+assert.strictEqual(r.ahorros.porSuper.y.ahorro, 600);
+assert.strictEqual(r.ahorros.porSuper.y.sinAlternativa, 1);
+assert.strictEqual(r.ahorros.total, 600);
+assert.strictEqual(analizar([{ nombre: 'a', qty: 1, precios: { x: 10, y: 20 } }], { stores: ['x', 'y'] }).ahorros, null);
 console.log('OK');
