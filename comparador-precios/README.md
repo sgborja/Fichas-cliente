@@ -51,7 +51,7 @@ Vercel no mantiene un servidor encendido: corre las funciones de `api/` en cada 
 
 ## Fijar la zona de un súper a mano (variables de entorno)
 Si un súper no reconoce el código postal (el aviso debajo del análisis lo indica), se puede fijar su zona con estas variables, usando el id del súper en mayúsculas (`CARREFOUR`, `DISCO`, `VEA`, `CHANGOMAS`):
-- `SC_<SUPER>`: canal de venta. Disco y Vea definen la zona así: el valor está en la cookie `vtex_segment` del navegador (campo `channel`, que se ve con `atob(...)` o decodificándola en base64). Disco viene con `33` (Córdoba).
+- `SC_<SUPER>`: canal de venta. Disco y Vea definen la zona así: el valor está en la cookie `vtex_segment` del navegador (campo `channel`, que se ve con `atob(...)` o decodificándola en base64). Disco viene con `33` y Vea con `34` (Córdoba).
 - `REGION_<SUPER>`: el identificador de región que usa el sitio (el valor `regionId` que aparece en las consultas de búsqueda del navegador al elegir tu sucursal), por ejemplo `REGION_DISCO`.
 - `COOKIES_<SUPER>`: cookies extra para ese súper (por ejemplo `vtex_segment=...`). No pegues cookies de sesión ni de cuenta.
 La pantalla de detalle (**ⓘ detalle**) de cada celda muestra qué zona se usó y por qué.

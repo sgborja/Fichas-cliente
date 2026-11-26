@@ -150,7 +150,7 @@ function pendiente(id, nombre) {
 const REAL = [
   vtex({ id: 'carrefour', nombre: 'Carrefour', base: 'https://www.carrefour.com.ar' }),
   vtex({ id: 'disco', nombre: 'Disco', base: 'https://www.disco.com.ar', sc: '33' }), // 33 = canal de venta de Córdoba (cookie vtex_segment)
-  vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar' }),
+  vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar', sc: '34' }), // 34 = canal de venta de Córdoba (cookie vtex_segment)
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
   laAnonima({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
 ];
