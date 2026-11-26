@@ -24,6 +24,8 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 dialog{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:10px;width:min(560px,92vw);padding:16px}
 dialog::backdrop{background:rgba(0,0,0,.5)}dialog textarea{width:100%;min-height:150px;font:13px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:8px}
 dialog .row{margin-top:10px}dialog label.o{flex-direction:row;gap:4px;align-items:center;color:var(--tx);font-size:14px}
+td input.nm{font-weight:600;border-color:transparent;background:transparent;cursor:text}td input.nm:hover,td input.nm:focus{border-color:var(--bd);background:var(--card)}
+.sub.clk{cursor:pointer}.sub.clk:hover{text-decoration:underline}.qrow{display:flex;gap:4px;margin-top:6px}.qrow input{flex:1;min-width:0;font-size:12px;padding:4px 6px}.qrow button{font-size:12px;padding:4px 8px;display:inline-block;width:auto}
 </style></head><body>
 <h1>Comparador de precios de supermercados · Córdoba</h1>
 <div class="mut" id="modo"></div>
@@ -38,7 +40,7 @@ dialog .row{margin-top:10px}dialog label.o{flex-direction:row;gap:4px;align-item
     <label>Código postal (zona) <input id="cp" value="5000" maxlength="4" style="width:80px"></label>
     <label>Costo extra por cada súper adicional ($) <input type="number" id="costo" value="1500" min="0" style="width:120px"></label>
     <label>Diferencia que se considera "poca" (%) <input type="number" id="tol" value="3" min="0" step="0.5" style="width:120px"></label>
-    <button class="p" id="go">Buscar precios</button>
+    <button class="p" id="go">Buscar precios</button><button id="todo" hidden title="Vuelve a consultar los precios de todos los productos">↻ Actualizar todo</button>
     <button id="csv">Importar lista</button><button id="clear">Vaciar</button>
     <button id="exp">Exportar a Excel (CSV)</button><button id="imp">Imprimir</button>
   </div>
@@ -87,14 +89,27 @@ if(!Object.keys(listas).length){ let old=null; try{old=JSON.parse(localStorage.g
 try{ const a=localStorage.getItem('lista_actual'); if(a&&listas[a]) actual=a; else actual=Object.keys(listas)[0] }catch{ actual=Object.keys(listas)[0] }
 let tiendas=[], demo=false, sel=new Set(), abierta=null, ultimoPlan=null;
 try{ sel=new Set(JSON.parse(localStorage.getItem('sel')||'[]')) }catch{}
-const L=()=>listas[actual], filas=()=>L().filas;
-function save(){ try{ localStorage.setItem('listas',JSON.stringify(listas)); localStorage.setItem('lista_actual',actual); localStorage.setItem('sel',JSON.stringify([...sel])); localStorage.setItem('cp',$('#cp').value) }
+const normaliza=n=>String(n||'').trim().toLowerCase().replace(/\s+/g,' ');
+const CP=()=>$('#cp').value.trim();
+const keyOf=(nombre,cp=CP())=>cp+'|'+normaliza(nombre);
+// Migración desde la versión anterior (resultados por posición) a resultados por producto.
+for(const l of Object.values(listas)) if(l.res){ let cp0='5000'; try{cp0=localStorage.getItem('cp')||'5000'}catch{} l.cache||={};
+  l.res.forEach(r=>{ if(r&&r.nombre) l.cache[cp0+'|'+normaliza(r.nombre)]={tiendas:r.tiendas,ts:l.ts||Date.now()} }); delete l.res }
+const L=()=>listas[actual], filas=()=>L().filas, cache=()=>(L().cache||={});
+const ent=i=>cache()[keyOf(filas()[i].nombre)];            // resultado guardado de la fila i
+// Resultados alineados con las filas de la tabla (sin consultar nada).
+function filasRes(){ return filas().map(f=>{ const e=f.nombre.trim()?cache()[keyOf(f.nombre)]:null; return {nombre:f.nombre,qty:f.qty||1,tiendas:e?e.tiendas:{},ts:e?e.ts:null,hay:!!e} }) }
+function save(){
+  try{
+    for(const l of Object.values(listas)){ if(!l.cache) continue; const nombres=new Set(l.filas.map(f=>normaliza(f.nombre)));
+      for(const k of Object.keys(l.cache)) if(!nombres.has(k.slice(k.indexOf('|')+1))) delete l.cache[k] }   // se descartan productos que ya no están
+    localStorage.setItem('listas',JSON.stringify(listas)); localStorage.setItem('lista_actual',actual); localStorage.setItem('sel',JSON.stringify([...sel])); localStorage.setItem('cp',$('#cp').value) }
   catch{ /* sin almacenamiento: la app sigue funcionando */ } }
 function pintarListas(){ $('#lista').innerHTML=Object.keys(listas).map(n=>`<option ${n===actual?'selected':''}>${esc(n)}</option>`).join('') }
 function cambiarLista(n){ actual=n; abierta=null; save(); pintarListas(); render(); mostrarAnalisis() }
 $('#lista').onchange=e=>cambiarLista(e.target.value);
 $('#nueva').onclick=()=>{const n=(prompt('Nombre de la lista nueva:')||'').trim(); if(!n) return; if(listas[n]) return alert('Ya existe una lista con ese nombre'); listas[n]={filas:[]}; cambiarLista(n)};
-$('#dup').onclick=()=>{const n=(prompt('Nombre de la copia:',actual+' (copia)')||'').trim(); if(!n) return; if(listas[n]) return alert('Ya existe una lista con ese nombre'); listas[n]={filas:JSON.parse(JSON.stringify(filas()))}; cambiarLista(n)};
+$('#dup').onclick=()=>{const n=(prompt('Nombre de la copia:',actual+' (copia)')||'').trim(); if(!n) return; if(listas[n]) return alert('Ya existe una lista con ese nombre'); listas[n]={filas:JSON.parse(JSON.stringify(filas())),cache:JSON.parse(JSON.stringify(cache()))}; cambiarLista(n)};
 $('#borrar').onclick=()=>{ if(Object.keys(listas).length<2) return alert('Tiene que quedar al menos una lista.'); if(!confirm('¿Borrar la lista "'+actual+'"?')) return; delete listas[actual]; cambiarLista(Object.keys(listas)[0]) };
 
 async function init(){
@@ -108,46 +123,75 @@ async function init(){
   pintarListas(); render(); mostrarAnalisis();
 }
 
+/* ---------- Qué falta consultar ---------- */
+// Un producto necesita consulta si nunca se buscó, si cambió el nombre/zona, si se sumó un súper o si ese súper dio error.
+function pendientes(){
+  const st=[...sel], vistos=new Set(), out=[];
+  for(const f of filas()){ const n=f.nombre.trim(); if(!n) continue; const key=keyOf(n); if(vistos.has(key)) continue; vistos.add(key);
+    const e=cache()[key], falta=st.filter(id=>!e||!e.tiendas[id]||e.tiendas[id].error);
+    if(falta.length) out.push({nombre:n,key,stores:falta}) }
+  return out;
+}
+function botones(){
+  const p=pendientes(), hay=filasRes().some(r=>r.hay), go=$('#go');
+  go.textContent=!hay?'Buscar precios':p.length?`Buscar lo nuevo (${p.length})`:'Todo al día ✓';
+  go.title=!hay?'Consulta todos los productos':p.length?'Consulta solo los productos nuevos o cambiados':'No hay nada nuevo para consultar. Usá "Actualizar todo" para volver a consultar.';
+  $('#todo').hidden=!hay;
+}
+
 /* ---------- Tabla ---------- */
 function celda(i,t,r,col){
   const x=r.tiendas[t.id], at=`data-i="${i}" data-t="${t.id}"`;
-  const ops=x?.opciones||[];
-  const btnOps=ops.length>1||(!x?.match&&ops.length)?`<button class="lnk" data-op="1" ${at}>${abierta&&abierta.i===i&&abierta.t===t.id?'▴ cerrar':'▾ otras opciones ('+ops.length+')'}</button>`:'';
-  const panel=abierta&&abierta.i===i&&abierta.t===t.id?`<div class="ops">${ops.map((o,k)=>{const pc=o.precioComparable??o.precio;return `<button data-pick="${k}" ${at} class="${x.match&&o.nombre===x.match.nombre&&o.precio===x.match.precio?'on':''}">${esc(o.nombre)} — <b>${money(pc)}</b>${o.ajustado?' (eq.)':''}${o.tipo==='distinto'?' · distinto':''}${o.porUnidad?' · '+money(o.porUnidad.precio)+'/'+(o.porUnidad.unidad==='l'?'l':'kg'):''}</button>`}).join('')}</div>`:'';
-  if(x?.error) return `<td class="cell" ${at}><b class="err">error</b><span class="sub err" style="max-width:220px">${esc(x.error).slice(0,260)}</span></td>`;
-  if(!x?.match){const sm=x?.sinMatch; return `<td class="mut cell" ${at}>no encontrado<span class="sub">${sm?(sm.cantidad?`el súper devolvió ${sm.cantidad} resultado(s) pero ninguno coincide. Primero: ${esc(sm.mejor||'')}`:'el súper no devolvió resultados para esta búsqueda'+(sm.diag?' ['+esc(sm.diag)+']':'')):''}</span>${btnOps}${panel}</td>`}
+  const ops=x?.opciones||[], abre=abierta&&abierta.i===i&&abierta.t===t.id;
+  const link=`<button class="lnk" data-op="1" ${at}>${abre?'▴ cerrar':ops.length>1?'▾ otras opciones ('+ops.length+')':'✎ cambiar producto'}</button>`;
+  const panel=abre?`<div class="ops">${ops.map((o,k)=>{const pc=o.precioComparable??o.precio;return `<button data-pick="${k}" ${at} class="${x.match&&o.nombre===x.match.nombre&&o.precio===x.match.precio?'on':''}">${esc(o.nombre)} — <b>${money(pc)}</b>${o.ajustado?' (eq.)':''}${o.tipo==='distinto'?' · distinto':''}${o.porUnidad?' · '+money(o.porUnidad.precio)+'/'+(o.porUnidad.unidad==='l'?'l':'kg'):''}</button>`}).join('')}
+    <div class="qrow"><input data-qtxt ${at} placeholder="Buscar otro texto solo en este súper…" value="${esc(x?.consulta||'')}"><button data-qgo ${at}>Buscar</button></div></div>`:'';
+  if(!x) return `<td class="mut cell" ${at}>sin buscar</td>`;
+  const propia=x.consulta?`<span class="tag" title="Se buscó «${esc(x.consulta)}» en este súper">búsqueda propia</span>`:'';
+  if(x.error) return `<td class="cell" ${at}><b class="err">error</b><span class="sub err" style="max-width:220px">${esc(x.error).slice(0,260)}</span>${link}${panel}</td>`;
+  if(!x.match){const sm=x.sinMatch; return `<td class="mut cell" ${at}>no encontrado${propia}<span class="sub">${sm?(sm.cantidad?`el súper devolvió ${sm.cantidad} resultado(s) pero ninguno coincide. Primero: ${esc(sm.mejor||'')}`:'el súper no devolvió resultados para esta búsqueda'+(sm.diag?' ['+esc(sm.diag)+']':'')):''}</span>${link}${panel}</td>`}
   const m=x.match, pc=m.precioComparable??m.precio, pu=m.porUnidad?` · ${money(m.porUnidad.precio)}/${m.porUnidad.unidad==='l'?'litro':'kg'}`:'';
   const eq=m.ajustado?`<span class="eq">equivale a ${money(pc)} por el tamaño pedido (real ${money(m.precio)})</span>`:'';
   let dl=''; if(m.anterior&&m.anterior.precio!==m.precio){const p=(m.precio/m.anterior.precio-1)*100; dl=`<span class="tag ${p>0?'up':'down'}" data-hk="${esc(m.hk)}" title="Antes ${money(m.anterior.precio)} (${m.anterior.fecha}). Clic para ver el historial">${p>0?'▲':'▼'} ${Math.abs(p).toFixed(0)}%</span>`}
-  return `<td class="cell" ${at}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${m.descuento>=3?`<span class="tag of">oferta −${m.descuento}%</span>`:''}${dl}${eq}<span class="sub">${esc(m.nombre)}${pu}</span>${btnOps}<button class="lnk" data-info="1" ${at} title="Datos técnicos del precio">ⓘ detalle</button>${panel}</td>`;
+  return `<td class="cell" ${at}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${propia}${m.descuento>=3?`<span class="tag of">oferta −${m.descuento}%</span>`:''}${dl}${eq}<span class="sub clk" data-op="1" ${at} title="Clic para elegir otro producto">${esc(m.nombre)}${pu}</span>${link}<button class="lnk" data-info="1" ${at} title="Datos técnicos del precio">ⓘ detalle</button>${panel}</td>`;
 }
 function render(){
-  const st=tiendas.filter(t=>sel.has(t.id)), res=L().res;
-  $('#t thead').innerHTML='<tr><th>Producto</th><th>Cant.</th>'+st.map(t=>`<th>${esc(t.nombre)}</th>`).join('')+'<th class="noprint"></th></tr>';
-  $('#ts').textContent=res&&L().ts?'Precios consultados el '+new Date(L().ts).toLocaleString('es-AR')+(Date.now()-L().ts>864e5?' · conviene volver a buscar':''):'';
+  const st=tiendas.filter(t=>sel.has(t.id)), rs=filasRes();
+  $('#t thead').innerHTML='<tr><th>Producto <span class="mut">(clic para editar)</span></th><th>Cant.</th>'+st.map(t=>`<th>${esc(t.nombre)}</th>`).join('')+'<th class="noprint"></th></tr>';
+  const tss=rs.filter(r=>r.ts).map(r=>r.ts), viejo=tss.length?Math.min(...tss):0;
+  $('#ts').textContent=viejo?'Precios consultados el '+new Date(viejo).toLocaleString('es-AR')+(Date.now()-viejo>864e5?' · conviene actualizar':''):'';
   $('#t tbody').innerHTML=filas().map((f,i)=>{
-    const r=res&&res[i]&&res[i].nombre===f.nombre?res[i]:null; const precios={};
-    if(r) for(const t of st){const m=r.tiendas[t.id]?.match; precios[t.id]=m?(m.precioComparable??m.precio):null}
-    const col=r?Analisis.colorFila(precios,st.map(t=>t.id),+$('#tol').value):{};
-    return `<tr><td><input data-i="${i}" data-k="nombre" value="${esc(f.nombre)}"></td><td><input class="q" type="number" min="1" data-i="${i}" data-k="qty" value="${f.qty||1}"></td>${st.map(t=>r?celda(i,t,r,col):'<td></td>').join('')}<td class="noprint"><button data-del="${i}">✕</button></td></tr>`}).join('');
+    const r=rs[i], precios={};
+    if(r.hay) for(const t of st){const m=r.tiendas[t.id]?.match; precios[t.id]=m?(m.precioComparable??m.precio):null}
+    const col=r.hay?Analisis.colorFila(precios,st.map(t=>t.id),+$('#tol').value):{};
+    return `<tr><td><input class="nm" title="Clic para editar el producto" data-i="${i}" data-k="nombre" value="${esc(f.nombre)}"></td><td><input class="q" type="number" min="1" data-i="${i}" data-k="qty" value="${f.qty||1}"></td>${st.map(t=>r.hay?celda(i,t,r,col):'<td class="mut">sin buscar</td>').join('')}<td class="noprint"><button data-del="${i}" title="Quitar de la lista">✕</button></td></tr>`}).join('');
+  botones();
 }
-$('#t').addEventListener('input',e=>{const i=e.target.dataset.i;if(i==null)return;filas()[i][e.target.dataset.k]=e.target.dataset.k==='qty'?+e.target.value||1:e.target.value;save()});
+$('#t').addEventListener('input',e=>{const i=e.target.dataset.i; if(i==null||e.target.dataset.qtxt!=null) return;
+  const k=e.target.dataset.k; filas()[i][k]=k==='qty'?Math.max(1,+e.target.value||1):e.target.value; save();
+  if(k==='qty') mostrarAnalisis(); botones()});                                   // la cantidad no necesita buscar de nuevo
+$('#t').addEventListener('change',e=>{ if(e.target.dataset.k==='nombre'){ abierta=null; render(); mostrarAnalisis() } });   // al terminar de editar el nombre
+$('#t').addEventListener('focusin',e=>{ if(e.target.dataset.k==='nombre') e.target.select() });
+$('#t').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.dataset.k==='nombre'){ e.target.blur(); setTimeout(()=>$('#go').click(),0) }   // Enter = buscar lo nuevo
+  if(e.key==='Enter'&&e.target.dataset.qtxt!=null){ const b=e.target.parentElement.querySelector('[data-qgo]'); b&&b.click() } });
 $('#t').addEventListener('click',async e=>{
-  const d=e.target.dataset;
-  if(d.del!=null){filas().splice(+d.del,1);L().res=null;save();render();mostrarAnalisis();return}
-  if(d.info){ const m=L().res[+d.i].tiendas[d.t]?.match; if(m) alert('Detalle técnico\n\nProducto: '+m.nombre+'\nPrecio usado: '+m.precio+'\nPrecio de lista: '+(m.precioLista??'-')+'\n'+(m.detalle?Object.entries(m.detalle).map(([k,v])=>k+': '+v).join('\n'):'(sin más datos)')+(m.url?'\nEnlace: '+m.url:'')); return }
+  const b=e.target.closest('[data-op],[data-pick],[data-info],[data-del],[data-hk],[data-qgo]'); if(!b) return; const d=b.dataset;
+  if(d.del!=null){filas().splice(+d.del,1);abierta=null;save();render();mostrarAnalisis();return}
+  if(d.info){ const m=ent(+d.i)?.tiendas[d.t]?.match; if(m) alert('Detalle técnico\n\nProducto: '+m.nombre+'\nPrecio usado: '+m.precio+'\nPrecio de lista: '+(m.precioLista??'-')+'\n'+(m.detalle?Object.entries(m.detalle).map(([k,v])=>k+': '+v).join('\n'):'(sin más datos)')+(m.url?'\nEnlace: '+m.url:'')); return }
   if(d.op){const i=+d.i; abierta=abierta&&abierta.i===i&&abierta.t===d.t?null:{i,t:d.t}; render();return}
-  if(d.pick!=null){const x=L().res[+d.i].tiendas[d.t]; x.match=x.opciones[+d.pick]; abierta=null; save(); render(); mostrarAnalisis(); return}
+  if(d.pick!=null){const x=ent(+d.i).tiendas[d.t]; x.match=x.opciones[+d.pick]; abierta=null; save(); render(); mostrarAnalisis(); return}
+  if(d.qgo!=null){ const i=+d.i, texto=b.parentElement.querySelector('[data-qtxt]').value.trim(); await buscarCelda(i,d.t,texto); return }
   if(d.hk){ try{ const h=await (await api('/api/historial?k='+encodeURIComponent(d.hk))).json(); alert('Historial de precios:\n'+h.slice(-15).map(([f,p])=>f+'  '+money(p)).join('\n')) }catch{} }
 });
-$('#t').addEventListener('dblclick',e=>{const td=e.target.closest('td.cell'); const res=L().res; if(!td||!res||e.target.closest('.ops')) return;
-  const i=+td.dataset.i, id=td.dataset.t, prev=res[i].tiendas[id]?.match?.precio||'';
-  const v=prompt('Precio de "'+res[i].nombre+'" en '+tiendas.find(t=>t.id===id).nombre+' (vacío = sin precio):',prev); if(v===null) return;
+$('#t').addEventListener('dblclick',e=>{const td=e.target.closest('td.cell'); if(!td||e.target.closest('.ops')) return;
+  const i=+td.dataset.i, id=td.dataset.t, en=ent(i); if(!en) return; const prev=en.tiendas[id]?.match?.precio||'';
+  const v=prompt('Precio de "'+filas()[i].nombre+'" en '+tiendas.find(t=>t.id===id).nombre+' (vacío = sin precio):',prev); if(v===null) return;
   const n=parseFloat(v.replace(/\./g,'').replace(',','.'));
-  res[i].tiendas[id]={...res[i].tiendas[id],error:undefined,match:isFinite(n)&&n>0?{nombre:'precio cargado a mano',precio:n,precioComparable:n,tipo:'exacto',manual:true}:null};
+  en.tiendas[id]={...en.tiendas[id],error:undefined,match:isFinite(n)&&n>0?{nombre:'precio cargado a mano',precio:n,precioComparable:n,tipo:'exacto',manual:true}:null};
   save(); render(); mostrarAnalisis()});
-$('#add').onclick=()=>{filas().push({nombre:'',qty:1});L().res=null;save();render()};
-$('#clear').onclick=()=>{L().filas=[];L().res=null;save();render();$('#analisis').hidden=true};
+$('#add').onclick=()=>{filas().push({nombre:'',qty:1});save();render();const n=document.querySelectorAll('#t input.nm');n[n.length-1]?.focus()};
+$('#clear').onclick=()=>{L().filas=[];L().cache={};abierta=null;save();render();$('#analisis').hidden=true};
 /* ---------- Importar lista (CSV / Excel pegado) ---------- */
 const dlg=$('#dlg');
 function previa(){ const l=Importar.parsearLista($('#txtImp').value); $('#prevImp').textContent=l.length?('Se detectaron '+l.length+' producto(s): '+l.slice(0,3).map(x=>x.nombre+' ×'+x.qty).join(', ')+(l.length>3?'…':'')):'Todavía no hay productos para importar.'; return l }
@@ -158,41 +202,65 @@ $('#cancelImp').onclick=()=>dlg.close();
 $('#plantilla').onclick=e=>{ e.preventDefault(); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([Importar.PLANTILLA],{type:'text/csv;charset=utf-8'})); a.download='plantilla-lista.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000) };
 $('#okImp').onclick=()=>{ const l=previa(); if(!l.length) return;
   const reemplazar=document.querySelector('input[name=modoImp]:checked').value==='reemplazar';
-  L().filas=reemplazar?l:filas().filter(f=>f.nombre.trim()).concat(l); L().res=null; abierta=null; save(); render(); mostrarAnalisis(); dlg.close() };
+  L().filas=reemplazar?l:filas().filter(f=>f.nombre.trim()).concat(l); abierta=null; save(); render(); mostrarAnalisis(); dlg.close() };
 $('#tol').onchange=()=>{render();mostrarAnalisis()}; $('#costo').onchange=mostrarAnalisis;
-$('#cp').onchange=()=>{L().res=null;save();render();$('#analisis').hidden=true};
+$('#cp').onchange=()=>{abierta=null;save();render();mostrarAnalisis()};      // cada zona tiene sus propios precios guardados
 $('#imp').onclick=()=>window.print();
 
-$('#go').onclick=async()=>{
-  const items=filas().filter(f=>f.nombre.trim()); if(!items.length) return;
-  const btn=$('#go'); btn.disabled=true; btn.textContent='Buscando…';
-  try{
-    let data;
-    if(demo) data=buscarDemo(items,[...sel]);
-    else{
-      // Un pedido por producto (cada uno es corto, ideal para Vercel), de a 3 en paralelo.
-      data=new Array(items.length); let sig=0, hechos=0, fatal=null;
-      const cp=$('#cp').value.trim(), stores=[...sel];
-      const trabajador=async()=>{ while(sig<items.length&&!fatal){ const i=sig++;
-        try{ const r=await api('/api/buscar',{method:'POST',body:JSON.stringify({items:[items[i]],stores,cp})}); const j=await r.json();
-          if(r.status===401){ fatal=new Error('Contraseña incorrecta'); return }
-          if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); data[i]=j[0];
-        }catch(e){ data[i]={nombre:items[i].nombre,qty:items[i].qty||1,tiendas:Object.fromEntries(stores.map(id=>[id,{error:'No se pudo consultar: '+e.message}]))} }
-        btn.textContent='Buscando '+(++hechos)+'/'+items.length+'…'; } };
-      await Promise.all([trabajador(),trabajador(),trabajador()]);
-      if(fatal) throw fatal;
-    }
-    L().filas=items; L().res=data; L().ts=Date.now(); abierta=null; save(); render(); mostrarAnalisis();
-  }catch(e){alert('Error: '+e.message)}
-  btn.disabled=false; btn.textContent='Buscar precios';
+/* ---------- Consultar precios (solo lo que falta, o todo si se pide) ---------- */
+// tareas: [{nombre,key,stores}]. Cada súper puede tener su propio texto de búsqueda ("búsqueda propia").
+async function consultar(tareas,progreso){
+  const cp=CP(), jobs=[];
+  for(const t of tareas){ const e=cache()[t.key], por={};
+    for(const id of t.stores){ const q=e?.tiendas[id]?.consulta||t.nombre; (por[q]||=[]).push(id) }
+    for(const [q,ids] of Object.entries(por)) jobs.push({key:t.key,nombre:t.nombre,q,ids}) }
+  let sig=0, hechos=0, fatal=null;
+  const trabajador=async()=>{ while(sig<jobs.length&&!fatal){ const j=jobs[sig++]; let por;
+    try{
+      if(demo) por=buscarDemo([{nombre:j.q}],j.ids)[0].tiendas;
+      else{ const r=await api('/api/buscar',{method:'POST',body:JSON.stringify({items:[{nombre:j.q,qty:1}],stores:j.ids,cp})}); const js=await r.json();
+        if(r.status===401){ fatal=new Error('Contraseña incorrecta'); return }
+        if(!r.ok) throw new Error(js.error||('HTTP '+r.status)); por=js[0].tiendas }
+    }catch(e){ por=Object.fromEntries(j.ids.map(id=>[id,{error:'No se pudo consultar: '+e.message}])) }
+    const en=(cache()[j.key]||={tiendas:{}}); en.ts=Date.now();
+    for(const id of j.ids) en.tiendas[id]={...por[id],...(j.q!==j.nombre?{consulta:j.q}:{})};
+    progreso&&progreso(++hechos,jobs.length) } };
+  await Promise.all([trabajador(),trabajador(),trabajador()]);       // de a 3 pedidos en paralelo
+  if(fatal) throw fatal;
+}
+async function buscarCelda(i,id,texto){
+  const f=filas()[i], key=keyOf(f.nombre); const en=(cache()[key]||={tiendas:{}});
+  if(!texto&&en.tiendas[id]) delete en.tiendas[id].consulta;                       // vacío = volver a la búsqueda normal
+  const previo=en.tiendas[id]; en.tiendas[id]=texto?{consulta:texto}:undefined;
+  try{ await consultar([{nombre:f.nombre.trim(),key,stores:[id]}]) }catch(e){ en.tiendas[id]=previo; alert('Error: '+e.message); return }
+  abierta=null; save(); render(); mostrarAnalisis();
+}
+async function correr(tareas){
+  if(!tareas.length) return;
+  const go=$('#go'), todo=$('#todo'); go.disabled=todo.disabled=true;
+  try{ await consultar(tareas,(h,n)=>{ go.textContent='Buscando '+h+'/'+n+'…' }); abierta=null; save() }
+  catch(e){ alert('Error: '+e.message) }
+  go.disabled=todo.disabled=false; render(); mostrarAnalisis();
+}
+$('#go').onclick=()=>{
+  if(!filas().some(f=>f.nombre.trim())) return;
+  const p=pendientes();
+  if(!p.length){ alert('Todo está al día: no hay productos nuevos ni cambiados.\n\nSi querés volver a consultar los precios de todos, tocá "Actualizar todo".'); return }
+  correr(p);
+};
+$('#todo').onclick=()=>{
+  const st=[...sel], vistos=new Set(), t=[];
+  for(const f of filas()){ const n=f.nombre.trim(); if(!n) continue; const key=keyOf(n); if(vistos.has(key)) continue; vistos.add(key); t.push({nombre:n,key,stores:st}) }
+  correr(t);
 };
 
 /* ---------- Análisis ---------- */
 const nom=id=>tiendas.find(t=>t.id===id)?.nombre||id;
 function mostrarAnalisis(){
-  const res=L().res, el=$('#analisis'); ultimoPlan=null;
-  if(!res||!res.length||res.length!==filas().length){el.hidden=true;return}
-  const st=tiendas.filter(t=>sel.has(t.id)).map(t=>t.id); if(!st.length){el.hidden=true;return}
+  const el=$('#analisis'); ultimoPlan=null;
+  const todas=filasRes(), res=todas.filter(r=>r.hay), faltan=todas.filter(r=>r.nombre.trim()&&!r.hay).length;
+  const st=tiendas.filter(t=>sel.has(t.id)).map(t=>t.id);
+  if(!res.length||!st.length){el.hidden=true;return}
   const rows=res.map(r=>({nombre:r.nombre,qty:r.qty,precios:Object.fromEntries(st.map(s=>[s,r.tiendas[s]?.match?(r.tiendas[s].match.precioComparable??r.tiendas[s].match.precio):null]))}));
   const costo=+$('#costo').value, a=Analisis.analizar(rows,{stores:st,costoViaje:costo,tolerancia:+$('#tol').value});
   const sinZona=st.filter(s=>res.every(r=>r.tiendas[s]&&'region' in r.tiendas[s]&&r.tiendas[s].region===null&&!r.tiendas[s].canal&&!r.tiendas[s].error)).map(s=>{const n=res.map(r=>r.tiendas[s].regionNota).find(Boolean); return nom(s)+(n?' ('+n+')':'')});
@@ -200,15 +268,16 @@ function mostrarAnalisis(){
   const porSuper={}; e.asign.forEach((x,i)=>{if(x)(porSuper[x.store]=porSuper[x.store]||[]).push({n:rows[i].nombre,q:rows[i].qty,p:x.precio})});
   ultimoPlan={a,porSuper,costo};
   el.innerHTML=`<div class="plan">Recomendación: ${e.stores.map(nom).map(esc).join(' + ')} · ${money(e.suma)}${e.stores.length>1?` + ${money(costo*(e.stores.length-1))} de recorrido`:''}</div>
+  ${faltan?`<div class="warn">Faltan buscar ${faltan} producto(s) de la lista: no están incluidos en este cálculo. Tocá "Buscar lo nuevo".</div>`:''}
   <ul>${Object.entries(porSuper).map(([s,l])=>`<li><b>${esc(nom(s))}</b>: ${l.map(x=>`${esc(x.n)} ×${x.q} (${money(x.p)})`).join(', ')}</li>`).join('')}</ul>
-  ${sinZona.length&&$('#cp').value.trim()?`<div class="warn">No se pudo ajustar la zona (CP ${esc($('#cp').value.trim())}) en: ${sinZona.map(esc).join(', ')}. Esos precios pueden ser los generales y no los de tu sucursal.</div>`:''}
+  ${sinZona.length&&CP()?`<div class="warn">No se pudo ajustar la zona (CP ${esc(CP())}) en: ${sinZona.map(esc).join(', ')}. Esos precios pueden ser los generales y no los de tu sucursal.</div>`:''}
   ${a.notas.length?`<ul>${a.notas.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}
   <div class="mut">Si compraras cada cosa en el más barato sin importar el recorrido: ${money(a.ideal.suma)}. ${a.unaSola?`Todo en un solo súper (${esc(nom(a.unaSola.stores[0]))}): ${money(a.unaSola.suma)}${a.unaSola.faltan?` (faltan ${a.unaSola.faltan} productos)`:''}.`:''}</div>`;
 }
 
 /* ---------- Exportar a Excel (CSV) ---------- */
 $('#exp').onclick=()=>{
-  const res=L().res; if(!res) return alert('Primero buscá los precios.');
+  const res=filasRes().filter(r=>r.hay); if(!res.length) return alert('Primero buscá los precios.');
   const st=tiendas.filter(t=>sel.has(t.id));
   const filasCsv=[['Producto','Cantidad',...st.flatMap(t=>[t.nombre+' (precio)',t.nombre+' (producto)']),'Más barato en']];
   res.forEach(r=>{let best=null; const cel=st.flatMap(t=>{const m=r.tiendas[t.id]?.match; const p=m?(m.precioComparable??m.precio):null; if(p!=null&&(!best||p<best.p)) best={p,n:t.nombre}; return [p==null?'':Math.round(p),m?m.nombre:(r.tiendas[t.id]?.error?'error':'no encontrado')]});
