@@ -153,6 +153,7 @@ const REAL = [
   vtex({ id: 'vea', nombre: 'Vea', base: 'https://www.vea.com.ar', sc: '34' }), // 34 = canal de venta de Córdoba (cookie vtex_segment)
   vtex({ id: 'changomas', nombre: 'Chango Más', base: 'https://www.masonline.com.ar' }),
   laAnonima({ id: 'laanonima', nombre: 'La Anónima', urlBusqueda: 'https://www.laanonima.com.ar/buscar/{q}' }),
+  pendiente('dino', 'Dino'), // https://www.dinoonline.com.ar/super/home : falta ver cómo consulta su buscador
 ];
 
 // Modo prueba: precios simulados y repetibles

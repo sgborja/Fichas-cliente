@@ -20,6 +20,7 @@ td input{width:100%}input.q{width:70px}button{cursor:pointer}button.p{background
 .plan{font-size:17px;font-weight:700}li{margin:4px 0}.warn{color:var(--neart);font-size:13px;margin-top:6px}td.cell{cursor:pointer}
 .ops{margin-top:6px;border:1px solid var(--bd);border-radius:8px;padding:4px;background:var(--bg);min-width:200px}
 .ops button{display:block;width:100%;text-align:left;font-size:12px;margin:2px 0;padding:4px 6px}.ops button.on{border-color:var(--acc)}
+.tachado{text-decoration:line-through;opacity:.6}td.excl{background:rgba(128,128,128,.10)}
 #cabImp{display:none}.its{margin:4px 0 0;padding-left:18px;columns:2;column-gap:24px}.its li{margin:1px 0;break-inside:avoid}
 @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:#fff;color:#000;padding:0;font-size:13px}#ctrl,#add,.lnk,.ops,#modo,td button,.noprint,dialog,h1{display:none!important}.card{border:0;padding:0;background:#fff}input{border:0;padding:0;background:none;color:#000}#cabImp{display:block;margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px}#cabImp h2{margin:0;font-size:20px}body[data-print=lista] .card:not(#analisis){display:none!important}body[data-print=tabla] #analisis{display:none!important}body[data-print=lista] .its{columns:1;list-style:none;padding-left:4px}body[data-print=lista] .its li{margin:5px 0;font-size:15px}body[data-print=lista] .its li::before{content:'\2610\00a0\00a0'}body[data-print=lista] .pl{list-style:none;padding:0;margin:0}body[data-print=lista] .pl>li{break-inside:avoid;margin:14px 0 0;border-top:1px solid #999;padding-top:8px}body[data-print=lista] .pl>li:first-child{border-top:0}body[data-print=tabla] .sub{font-size:9px;max-width:none}body[data-print=tabla] th,body[data-print=tabla] td{padding:3px 5px}body[data-print=tabla] .c{padding:1px 4px}body[data-print=tabla] tr{break-inside:avoid}body[data-print=tabla] #ts{margin:0 0 4px}body[data-print=lista] .plan{font-size:18px}table{min-width:0}th,td{padding:4px 6px}}
 dialog{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:10px;width:min(560px,92vw);padding:16px}
@@ -43,7 +44,7 @@ td input.nm{font-weight:600;border-color:transparent;background:transparent;curs
     <label>Código postal (zona) <input id="cp" value="5000" maxlength="4" style="width:80px"></label>
     <label>Costo extra por cada súper adicional ($) <input type="number" id="costo" value="1500" min="0" style="width:120px"></label>
     <label>Diferencia que se considera "poca" (%) <input type="number" id="tol" value="3" min="0" step="0.5" style="width:120px"></label>
-    <button class="p" id="go">Buscar precios</button><button id="todo" hidden title="Vuelve a consultar los precios de todos los productos">↻ Actualizar todo</button>
+    <label style="flex-direction:row;align-items:center;gap:4px;color:var(--tx);font-size:14px" title="Si un súper no tiene el producto y trae uno parecido, no lo usa para comparar"><input type="checkbox" id="soloExactos"> Ignorar productos "similares"</label><button class="p" id="go">Buscar precios</button><button id="todo" hidden title="Vuelve a consultar los precios de todos los productos">↻ Actualizar todo</button>
     <button id="csv">Importar lista</button><button id="clear">Vaciar</button>
     <button id="orden" title="Ordena los productos de la planilla de la A a la Z">Ordenar A-Z</button><button id="exp">Exportar a Excel (CSV)</button><button id="impLista" title="Hoja con qué comprar en cada súper, para llevar">🖨 Imprimir lista de compras</button><button id="impTabla" title="La planilla con todos los precios">🖨 Imprimir comparación</button>
   </div>
@@ -123,6 +124,7 @@ async function init(){
   $('#tiendas').innerHTML=tiendas.map(t=>`<label><input type="checkbox" value="${t.id}" ${sel.has(t.id)?'checked':''}> ${esc(t.nombre)}${t.pendiente?' <span class="tag">sin configurar</span>':''}</label>`).join('');
   $('#tiendas').onchange=e=>{e.target.checked?sel.add(e.target.value):sel.delete(e.target.value);save();render();mostrarAnalisis()};
   $('#cp').value=localStorage.getItem('cp')||'5000';
+  try{ $('#soloExactos').checked=localStorage.getItem('soloExactos')==='1' }catch{}
   pintarListas(); render(); mostrarAnalisis();
 }
 
@@ -143,6 +145,9 @@ function botones(){
 }
 
 /* ---------- Tabla ---------- */
+// Un precio cuenta para la comparación salvo que se lo haya anulado a mano, o sea "similar" con la casilla de ignorarlos marcada.
+function excluido(x){ const m=x&&x.match; if(!m) return null; if(x.anulado&&x.anulado===m.nombre) return 'anulado'; if($('#soloExactos').checked&&m.tipo==='similar'&&!m.manual) return 'similar'; return null }
+function precioDe(x){ const m=x&&x.match; return m&&!excluido(x)?(m.precioComparable??m.precio):null }
 function celda(i,t,r,col){
   const x=r.tiendas[t.id], at=`data-i="${i}" data-t="${t.id}"`;
   const ops=x?.opciones||[], abre=abierta&&abierta.i===i&&abierta.t===t.id;
@@ -154,9 +159,11 @@ function celda(i,t,r,col){
   if(x.error) return `<td class="cell" ${at}><b class="err">error</b><span class="sub err" style="max-width:220px">${esc(x.error).slice(0,260)}</span>${link}${panel}</td>`;
   if(!x.match){const sm=x.sinMatch; return `<td class="mut cell" ${at}>no encontrado${propia}<span class="sub">${sm?(sm.cantidad?`el súper devolvió ${sm.cantidad} resultado(s) pero ninguno coincide. Primero: ${esc(sm.mejor||'')}`:'el súper no devolvió resultados para esta búsqueda'+(sm.diag?' ['+esc(sm.diag)+']':'')):''}</span>${link}${panel}</td>`}
   const m=x.match, pc=m.precioComparable??m.precio, pu=m.porUnidad?` · ${money(m.porUnidad.precio)}/${m.porUnidad.unidad==='l'?'litro':'kg'}`:'';
+  const ex=excluido(x);
+  if(ex) return `<td class="cell excl" ${at}><span class="c tachado">${money(pc)}</span><span class="tag">${ex==='anulado'?'anulado':'similar · ignorado'}</span><span class="sub clk" data-op="1" ${at} title="Clic para elegir otro producto">${esc(m.nombre)}${pu}</span>${ex==='anulado'?`<button class="lnk" data-rest="1" ${at}>↩ volver a usar</button>`:''}${link}${panel}</td>`;
   const eq=m.ajustado?`<span class="eq">equivale a ${money(pc)} por el tamaño pedido (real ${money(m.precio)})</span>`:'';
   let dl=''; if(m.anterior&&m.anterior.precio!==m.precio){const p=(m.precio/m.anterior.precio-1)*100; dl=`<span class="tag ${p>0?'up':'down'}" data-hk="${esc(m.hk)}" title="Antes ${money(m.anterior.precio)} (${m.anterior.fecha}). Clic para ver el historial">${p>0?'▲':'▼'} ${Math.abs(p).toFixed(0)}%</span>`}
-  return `<td class="cell" ${at}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${propia}${m.descuento>=3?`<span class="tag of">oferta −${m.descuento}%</span>`:''}${dl}${eq}<span class="sub clk" data-op="1" ${at} title="Clic para elegir otro producto">${esc(m.nombre)}${pu}</span>${link}<button class="lnk" data-info="1" ${at} title="Datos técnicos del precio">ⓘ detalle</button>${panel}</td>`;
+  return `<td class="cell" ${at}><span class="c ${col[t.id]||''}">${money(pc)}</span>${m.tipo==='similar'?'<span class="tag">similar</span>':''}${m.manual?'<span class="tag">manual</span>':''}${propia}${m.descuento>=3?`<span class="tag of">oferta −${m.descuento}%</span>`:''}${dl}${eq}<span class="sub clk" data-op="1" ${at} title="Clic para elegir otro producto">${esc(m.nombre)}${pu}</span>${link}<button class="lnk" data-anular="1" ${at} title="No es el mismo producto: no usarlo en la comparación">🚫 anular</button><button class="lnk" data-info="1" ${at} title="Datos técnicos del precio">ⓘ detalle</button>${panel}</td>`;
 }
 function render(){
   const st=tiendas.filter(t=>sel.has(t.id)), rs=filasRes();
@@ -165,7 +172,7 @@ function render(){
   $('#ts').textContent=viejo?'Precios consultados el '+new Date(viejo).toLocaleString('es-AR')+(Date.now()-viejo>864e5?' · conviene actualizar':''):'';
   $('#t tbody').innerHTML=filas().map((f,i)=>{
     const r=rs[i], precios={};
-    if(r.hay) for(const t of st){const m=r.tiendas[t.id]?.match; precios[t.id]=m?(m.precioComparable??m.precio):null}
+    if(r.hay) for(const t of st){precios[t.id]=precioDe(r.tiendas[t.id])}
     const col=r.hay?Analisis.colorFila(precios,st.map(t=>t.id),+$('#tol').value):{};
     return `<tr><td><input class="nm" title="Clic para editar el producto" data-i="${i}" data-k="nombre" value="${esc(f.nombre)}"></td><td><input class="q" type="number" min="1" data-i="${i}" data-k="qty" value="${f.qty||1}"></td>${st.map(t=>r.hay?celda(i,t,r,col):'<td class="mut">sin buscar</td>').join('')}<td class="noprint"><button data-del="${i}" title="Quitar de la lista">✕</button></td></tr>`}).join('');
   botones();
@@ -179,9 +186,11 @@ $('#t').addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.target.dataset.k==='nombre'){ e.target.blur(); setTimeout(()=>$('#go').click(),0) }   // Enter = buscar lo nuevo
   if(e.key==='Enter'&&e.target.dataset.qtxt!=null){ const b=e.target.parentElement.querySelector('[data-qgo]'); b&&b.click() } });
 $('#t').addEventListener('click',async e=>{
-  const b=e.target.closest('[data-op],[data-pick],[data-info],[data-del],[data-hk],[data-qgo]'); if(!b) return; const d=b.dataset;
+  const b=e.target.closest('[data-op],[data-pick],[data-info],[data-del],[data-hk],[data-qgo],[data-anular],[data-rest]'); if(!b) return; const d=b.dataset;
   if(d.del!=null){filas().splice(+d.del,1);abierta=null;save();render();mostrarAnalisis();return}
   if(d.info){ const m=ent(+d.i)?.tiendas[d.t]?.match; if(m) alert('Detalle técnico\n\nProducto: '+m.nombre+'\nPrecio usado: '+m.precio+'\nPrecio de lista: '+(m.precioLista??'-')+'\n'+(m.detalle?Object.entries(m.detalle).map(([k,v])=>k+': '+v).join('\n'):'(sin más datos)')+(m.url?'\nEnlace: '+m.url:'')); return }
+  if(d.anular){ const x=ent(+d.i)?.tiendas[d.t]; if(x&&x.match){ x.anulado=x.match.nombre; abierta=null; save(); render(); mostrarAnalisis() } return }
+  if(d.rest){ const x=ent(+d.i)?.tiendas[d.t]; if(x) delete x.anulado; save(); render(); mostrarAnalisis(); return }
   if(d.op){const i=+d.i; abierta=abierta&&abierta.i===i&&abierta.t===d.t?null:{i,t:d.t}; render();return}
   if(d.pick!=null){const x=ent(+d.i).tiendas[d.t]; x.match=x.opciones[+d.pick]; abierta=null; save(); render(); mostrarAnalisis(); return}
   if(d.qgo!=null){ const i=+d.i, texto=b.parentElement.querySelector('[data-qtxt]').value.trim(); await buscarCelda(i,d.t,texto); return }
@@ -206,7 +215,8 @@ $('#plantilla').onclick=e=>{ e.preventDefault(); const a=document.createElement(
 $('#okImp').onclick=()=>{ const l=previa(); if(!l.length) return;
   const reemplazar=document.querySelector('input[name=modoImp]:checked').value==='reemplazar';
   L().filas=reemplazar?l:filas().filter(f=>f.nombre.trim()).concat(l); abierta=null; save(); render(); mostrarAnalisis(); dlg.close() };
-$('#tol').onchange=()=>{render();mostrarAnalisis()}; $('#costo').onchange=mostrarAnalisis;
+$('#tol').onchange=()=>{render();mostrarAnalisis()};
+$('#soloExactos').onchange=()=>{ try{localStorage.setItem('soloExactos',$('#soloExactos').checked?'1':'0')}catch{} abierta=null; render(); mostrarAnalisis() }; $('#costo').onchange=mostrarAnalisis;
 $('#cp').onchange=()=>{abierta=null;save();render();mostrarAnalisis()};      // cada zona tiene sus propios precios guardados
 $('#orden').onclick=()=>{ L().filas.sort((a,b)=>(!a.nombre.trim())-(!b.nombre.trim())||alfa(a.nombre,b.nombre)); abierta=null; save(); render(); mostrarAnalisis() };
 /* ---------- Imprimir: lista de compras (qué comprar en cada súper) o comparación (la planilla) ---------- */
@@ -238,7 +248,7 @@ async function consultar(tareas,progreso){
         if(!r.ok) throw new Error(js.error||('HTTP '+r.status)); por=js[0].tiendas }
     }catch(e){ por=Object.fromEntries(j.ids.map(id=>[id,{error:'No se pudo consultar: '+e.message}])) }
     const en=(cache()[j.key]||={tiendas:{}}); en.ts=Date.now();
-    for(const id of j.ids) en.tiendas[id]={...por[id],...(j.q!==j.nombre?{consulta:j.q}:{})};
+    for(const id of j.ids){ const prev=en.tiendas[id], nuevo={...por[id],...(j.q!==j.nombre?{consulta:j.q}:{})}; if(prev?.anulado&&nuevo.match&&nuevo.match.nombre===prev.anulado) nuevo.anulado=prev.anulado; en.tiendas[id]=nuevo }
     progreso&&progreso(++hechos,jobs.length) } };
   await Promise.all([trabajador(),trabajador(),trabajador()]);       // de a 3 pedidos en paralelo
   if(fatal) throw fatal;
@@ -277,9 +287,10 @@ function mostrarAnalisis(){
   const todas=filasRes(), res=todas.filter(r=>r.hay), faltan=todas.filter(r=>r.nombre.trim()&&!r.hay).length;
   const st=tiendas.filter(t=>sel.has(t.id)).map(t=>t.id);
   if(!res.length||!st.length){el.hidden=true;return}
-  const rows=res.map(r=>({nombre:r.nombre,qty:r.qty,precios:Object.fromEntries(st.map(s=>[s,r.tiendas[s]?.match?(r.tiendas[s].match.precioComparable??r.tiendas[s].match.precio):null]))}));
+  const rows=res.map(r=>({nombre:r.nombre,qty:r.qty,precios:Object.fromEntries(st.map(s=>[s,precioDe(r.tiendas[s])]))}));
   const costo=+$('#costo').value, a=Analisis.analizar(rows,{stores:st,costoViaje:costo,tolerancia:+$('#tol').value,nombres:Object.fromEntries(tiendas.map(t=>[t.id,t.nombre]))});
   const sinZona=st.filter(s=>res.every(r=>r.tiendas[s]&&'region' in r.tiendas[s]&&r.tiendas[s].region===null&&!r.tiendas[s].canal&&!r.tiendas[s].error)).map(s=>{const n=res.map(r=>r.tiendas[s].regionNota).find(Boolean); return nom(s)+(n?' ('+n+')':'')});
+  const nEx=res.reduce((t,r)=>t+st.filter(s=>excluido(r.tiendas[s])).length,0);
   const e=a.elegido; el.hidden=false;
   const porSuper={}; e.asign.forEach((x,i)=>{if(x)(porSuper[x.store]=porSuper[x.store]||[]).push({n:rows[i].nombre,q:rows[i].qty,p:x.precio})});
   ultimoPlan={a,porSuper,costo};
@@ -292,6 +303,7 @@ function mostrarAnalisis(){
   const resumen=ah?`<div style="margin:6px 0">Ahorro total frente a comprar todo en ${esc(nom(ah.principal))}: <span class="ahorro">${money(ah.total)}</span> <small class="mut">(sin contar el recorrido)</small>${viaje?` · costo estimado de ir a ${e.stores.length-1} súper(s) más: ${money(viaje)} · <b>ahorro neto: ${money(ah.total-viaje)}</b>`:''}</div>`:'';
   el.innerHTML=`<div class="plan">Recomendación: ${e.stores.map(nom).map(esc).join(' + ')} · ${money(e.suma)}${e.stores.length>1?` + ${money(viaje)} de recorrido`:''}</div>
   ${resumen}
+  ${nEx?`<div class="warn">${nEx} precio(s) no se usan en la comparación (anulados a mano o "similares" ignorados).</div>`:''}
   ${faltan?`<div class="warn">Faltan buscar ${faltan} producto(s) de la lista: no están incluidos en este cálculo. Tocá "Buscar lo nuevo".</div>`:''}
   <ul class="pl">${lista}</ul>
   ${sinZona.length&&CP()?`<div class="warn">No se pudo ajustar la zona (CP ${esc(CP())}) en: ${sinZona.map(esc).join(', ')}. Esos precios pueden ser los generales y no los de tu sucursal.</div>`:''}
@@ -304,7 +316,7 @@ $('#exp').onclick=()=>{
   const res=filasRes().filter(r=>r.hay); if(!res.length) return alert('Primero buscá los precios.');
   const st=tiendas.filter(t=>sel.has(t.id));
   const filasCsv=[['Producto','Cantidad',...st.flatMap(t=>[t.nombre+' (precio)',t.nombre+' (producto)']),'Más barato en']];
-  res.forEach(r=>{let best=null; const cel=st.flatMap(t=>{const m=r.tiendas[t.id]?.match; const p=m?(m.precioComparable??m.precio):null; if(p!=null&&(!best||p<best.p)) best={p,n:t.nombre}; return [p==null?'':Math.round(p),m?m.nombre:(r.tiendas[t.id]?.error?'error':'no encontrado')]});
+  res.forEach(r=>{let best=null; const cel=st.flatMap(t=>{const m=r.tiendas[t.id]?.match; const p=precioDe(r.tiendas[t.id]); if(p!=null&&(!best||p<best.p)) best={p,n:t.nombre}; return [p==null?'':Math.round(p),m?(excluido(r.tiendas[t.id])?'(no usado) ':'')+m.nombre:(r.tiendas[t.id]?.error?'error':'no encontrado')]});
     filasCsv.push([r.nombre,r.qty,...cel,best?best.n:''])});
   if(ultimoPlan){ filasCsv.push([]); filasCsv.push(['RECOMENDACIÓN',ultimoPlan.a.elegido.stores.map(nom).join(' + '),'Total',Math.round(ultimoPlan.a.elegido.suma)]);
     const ah=ultimoPlan.a.ahorros;
